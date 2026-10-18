@@ -18,10 +18,12 @@ const LIVE = (() => {
   const ok = configured && !!window.firebase;
   const why = !configured ? 'config' : (!window.firebase ? 'offline' : null);
 
-  let db = null, authError = null, ready = Promise.resolve();
+  let db = null, authError = null, ready = Promise.resolve(), offset = 0;
   if (ok) {
     firebase.initializeApp(cfg);
     db = firebase.database();
+    // فرق الساعة بين الجهاز والخادم — ليكون المؤقت متزامنًا على كل الأجهزة
+    db.ref('.info/serverTimeOffset').on('value', s => { offset = +s.val() || 0; });
     ready = firebase.auth().signInAnonymously()
       .catch(e => { authError = e; console.warn('تعذّر تسجيل الدخول المجهول (فعّلي Anonymous من Authentication):', e); });
   }
@@ -52,6 +54,7 @@ const LIVE = (() => {
       case 'cards':      return { kind:'text', q:s.subtitle || s.title, context:s.cards.map(c=>`${c.icon} ${c.title}`) };
       case 'tf':         return { kind:'tf', q:'صح أم خطأ؟', items:s.items };
       case 'groups':     return { kind:'text', q:s.prompt, perTeam:s.tasks };
+      case 'value':      return { kind:'text', q:s.ask || s.question, model:s.items.map(x=>`${x.icon} <b>${x.t}</b>: ${x.d}`).join('<br>') };
       case 'closing':    return { kind:'rate', q:'كيف تقيّمين فهمكِ للدرس؟', items:s.rating };
     }
     return null;
@@ -76,6 +79,7 @@ const LIVE = (() => {
     get authError(){ return authError; },
     ref: p => db.ref(`rooms/${room}/${p}`),
     ts: () => firebase.database.ServerValue.TIMESTAMP,
+    now: () => Date.now() + offset,
     onConn: fn => db.ref('.info/connected').on('value', s => fn(!!s.val())),
     taskFor, grade, esc, strip, norm
   };

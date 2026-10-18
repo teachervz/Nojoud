@@ -162,6 +162,30 @@ textarea:disabled{opacity:.8}
 .team b{font-size:21px;font-weight:900}
 .team small{position:absolute;top:8px;left:10px;font-size:13px;font-weight:800;background:rgba(255,255,255,.3);border-radius:999px;padding:0 8px}
 
+/* ---------- ⏱ المؤقت + ⭐ الذهبي + 🎉 الاحتفال ---------- */
+.tbar{position:relative;height:48px;border-radius:999px;background:#FEF3C7;overflow:hidden;margin-bottom:16px;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:21px;color:#92400E}
+.tbar[hidden]{display:none}
+.tbar i{position:absolute;top:0;bottom:0;right:0;background:#FCD34D;transition:width .25s linear}
+.tbar span{position:relative}
+.tbar.warn{background:var(--badS);color:var(--bad);animation:pulse 1s infinite}
+.tbar.warn i{background:#FECDD3}
+.tbar.end{background:var(--pdd);color:#fff}
+@keyframes pulse{50%{transform:scale(1.02)}}
+.card.timeup #body{pointer-events:none;opacity:.55;filter:grayscale(.3)}
+.gold{display:inline-block;background:linear-gradient(135deg,#FDE68A,#F59E0B);color:#78350F;border-radius:999px;padding:2px 14px;font-weight:900;font-size:16px;
+  margin-inline-start:8px;box-shadow:0 0 0 3px #FEF3C7;animation:pop .5s}
+.h-rank{font-weight:900;color:#fff;background:var(--pdd);border-radius:999px;padding:6px 14px;font-size:16px}
+.h-rank:empty{display:none}
+.fx{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(46,16,101,.55);pointer-events:none;animation:fxOut 3s forwards}
+.fx-box{background:#fff;border-radius:34px;padding:30px 54px;text-align:center;box-shadow:var(--shadow);animation:pop .5s;max-width:88vw}
+.fx-box .e{font-size:96px;line-height:1.1}
+.fx-box b{display:block;font-size:36px;font-weight:900;color:var(--pdd);margin-top:6px}
+.fx-box small{display:block;font-size:20px;color:var(--muted);font-weight:700;margin-top:4px}
+@keyframes fxOut{0%,78%{opacity:1}100%{opacity:0}}
+.fly{position:fixed;top:-60px;z-index:51;pointer-events:none;font-size:42px;animation:fall 2.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(115vh) rotate(540deg)}}
+
 @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 @keyframes floaty{50%{transform:translateY(-12px)}}
 .enter{animation:pop .45s}
@@ -179,6 +203,7 @@ textarea:disabled{opacity:.8}
 <header id="hdr" hidden>
   <div class="h-team" id="hTeam"></div>
   <div class="h-pts">🏆 <b id="hPts">0</b></div>
+  <div class="h-rank" id="hRank"></div>
   <div class="h-sp"></div>
   <div class="h-conn" id="hConn">غير متصل</div>
   <button class="h-change" id="hChange">تغيير المجموعة</button>
@@ -205,7 +230,7 @@ const clone = v => v==null ? v : JSON.parse(JSON.stringify(v));
 let team = null;
 try { const t = localStorage.getItem(KEY); if (t !== null && T[+t]) team = +t; } catch(e) {}
 
-const st = { slide:null, task:null, sent:null, loaded:false, revealed:false, draft:null, ideas:[], mix:[] };
+const st = { slide:null, task:null, sent:null, loaded:false, revealed:false, revLoaded:false, draft:null, ideas:[], mix:[], timer:null, timeUp:false };
 let subs = [], presence = {}, presRef = null, liveStarted = false;
 const listen = (r, ev, fn) => { r.on(ev, fn); subs.push(() => r.off(ev, fn)); };
 
@@ -245,7 +270,15 @@ function enterTeam(){
   const connFn = s => onConn(!!s.val());
   connRef.on('value', connFn); teamSubs.push(() => connRef.off('value', connFn));
 
-  const pts = LIVE.ref('scores/' + team), ptsFn = s => { $('#hPts').textContent = +s.val() || 0; };
+  let prevPts = null;
+  const pts = LIVE.ref('scores'), ptsFn = s => {
+    const all = s.val() || {}, mine = +all[team] || 0;
+    const rank = 1 + T.filter((_, k) => k !== team && (+all[k] || 0) > mine).length;
+    $('#hPts').textContent = mine;
+    $('#hRank').textContent = mine > 0 ? (rank === 1 ? '👑 المركز الأول' : `المركز ${rank}`) : '';
+    if (prevPts !== null && mine > prevPts) { showFx('🏅', `+${mine - prevPts} ${mine - prevPts > 1 ? 'نقاط' : 'نقطة'} لمجموعتكنّ!`, rank === 1 ? 'أنتنّ في الصدارة 👑' : `ترتيبكنّ الآن: ${rank}`); rain(); }
+    prevPts = mine;
+  };
   pts.on('value', ptsFn); teamSubs.push(() => pts.off('value', ptsFn));
 
   const live = LIVE.ref('live'), liveFn = s => {
@@ -283,7 +316,7 @@ function onSlide(n){
   if (n === st.slide) return;
   subs.forEach(f => f()); subs = [];
   const s = SLIDES[n], t = LIVE.taskFor(s);
-  Object.assign(st, { slide:n, task:t, sent:null, loaded:false, revealed:false, ideas:[], draft: t ? emptyDraft(t) : null });
+  Object.assign(st, { slide:n, task:t, sent:null, loaded:false, revealed:false, revLoaded:false, ideas:[], timer:null, timeUp:false, draft: t ? emptyDraft(t) : null });
   if (!t) {
     screen('👀', 'تابعي الشاشة', 'لا يوجد سؤال الآن… استمعي للمعلمة وشاركي في النقاش',
       s && s.title ? `<div class="now">📍 ${LIVE.strip(s.type==='title'?LESSON.title:s.title)}</div>` : '');
@@ -296,7 +329,11 @@ function onSlide(n){
     if (!st.loaded) { st.loaded = true; if (a && a.v != null) { st.draft = mergeDraft(t, a.v); render(); return; } }
     updateFoot();
   });
-  listen(LIVE.ref(`reveal/${n}`), 'value', snap => { const r = !!snap.val(); if (r !== st.revealed) { st.revealed = r; render(); } });
+  listen(LIVE.ref(`reveal/${n}`), 'value', snap => {
+    const r = !!snap.val(), first = !st.revLoaded; st.revLoaded = true;
+    if (r !== st.revealed) { st.revealed = r; render(); if (r && !first) cheer(); }
+  });
+  listen(LIVE.ref(`timer/${n}`), 'value', snap => { st.timer = snap.val(); tick(); });
   if (t.kind === 'ideas') listen(LIVE.ref(`ideas/${n}`), 'child_added', snap => {
     const d = snap.val() || {}; if (d.team !== team) return;
     st.ideas.push(d.text); drawIdeas();
@@ -321,23 +358,29 @@ function render(){
   const needSend = !['rate', 'ideas'].includes(t.kind);
   // بعد الكشف نعرض الإجابة المُرسلة فعلًا (لا المسودة غير المرسلة)
   const d = R ? (st.sent && st.sent.v != null ? mergeDraft(t, st.sent.v) : emptyDraft(t)) : st.draft;
-  view.innerHTML = `<div class="card enter">
-      ${lockBar}
-      ${s.tag ? `<span class="tag">${s.tag}</span>` : ''}
+  const lockT = st.timeUp && !R;
+  view.innerHTML = `<div class="card enter ${lockT ? 'timeup' : ''}">
+      ${lockBar}<div class="tbar" id="tbar" hidden><i></i><span></span></div>
+      ${s.tag ? `<span class="tag">${s.tag}</span>` : ''}${s.points > 1 ? `<span class="gold">⭐ سؤال ذهبي × ${s.points}</span>` : ''}
       <h1 class="title">${s.title || ''}</h1>
       ${t.q && !t.perTeam ? `<div class="q">${t.q}</div>` : ''}${mine}${ctx}
       <div id="body">${BODY[t.kind] ? BODY[t.kind](t, d, R) : ''}</div>
       ${R && t.model ? `<div class="model">💡 ${t.model}</div>` : ''}
-      <div class="foot">${needSend && !R ? `<button class="send" id="send">📤 إرسال الإجابة</button>` : ''}<div class="status" id="status"></div></div>
+      <div class="foot">${needSend && !R && !lockT ? `<button class="send" id="send">📤 إرسال الإجابة</button>` : ''}<div class="status" id="status"></div></div>
     </div>`;
-  BIND[t.kind] && BIND[t.kind](t, R);
+  BIND[t.kind] && BIND[t.kind](t, R || lockT);
   const send = $('#send'); if (send) send.onclick = submit;
-  updateFoot();
+  updateFoot(); tick();
 }
 
 function updateFoot(){
   const stEl = $('#status'), send = $('#send'), t = st.task; if (!stEl || !t) return;
   if (t.kind === 'ideas') { stEl.className = 'status'; stEl.textContent = st.ideas.length ? `أرسلتنّ ${st.ideas.length} فكرة 💡` : ''; return; }
+  if (st.timeUp && !st.revealed) {
+    stEl.className = 'status ' + (st.sent ? 'ok' : 'bad');
+    stEl.textContent = st.sent ? '⏰ انتهى الوقت — إجابتكنّ وصلت ✅ انتظرن الكشف' : '⏰ انتهى الوقت ولم تُرسَل إجابة';
+    return;
+  }
   if (st.revealed) {
     stEl.className = 'status ' + (st.sent ? 'ok' : 'bad');
     stEl.textContent = st.sent ? '✅ تم استلام إجابتكنّ' : 'لم تُرسَل إجابة لهذا السؤال';
@@ -364,7 +407,7 @@ function validate(t, d){
 }
 
 function submit(){
-  const t = st.task, ok = validate(t, st.draft);
+  const t = st.task, ok = st.timeUp ? '⏰ انتهى الوقت' : validate(t, st.draft);
   if (ok !== true) { flash(ok); return; }
   const v = (t.kind === 'text') ? String(st.draft).trim()
           : (t.kind === 'texts' || t.kind === 'blanks') ? st.draft.map(x => String(x).trim()) : clone(st.draft);
@@ -450,6 +493,46 @@ const BIND = {
     $('#ideaSend').onclick = go; inp.onkeydown = e => { if (e.key === 'Enter') go(); };
   }
 };
+
+/* ⏱ المؤقت المتزامن مع المعلمة */
+setInterval(tick, 250);
+function tick(){
+  const bar = $('#tbar'), tm = st.timer;
+  if (!tm || !st.task) { if (bar) bar.hidden = true; if (st.timeUp) { st.timeUp = false; render(); } return; }
+  const ms = tm.end - LIVE.now(), left = Math.ceil(ms / 1000);
+  if (left > 0 && st.timeUp) { st.timeUp = false; render(); return; }
+  if (left <= 0 && !st.timeUp && !st.revealed) { st.timeUp = true; render(); return; }
+  if (!bar) return;
+  bar.hidden = st.revealed;
+  bar.classList.toggle('warn', left > 0 && left <= 5);
+  bar.classList.toggle('end', left <= 0);
+  $('i', bar).style.width = Math.max(0, Math.min(100, ms / (tm.sec * 10))) + '%';
+  $('span', bar).textContent = left > 0 ? `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '⏰ انتهى الوقت!';
+}
+
+/* 🎉 الاحتفال عند الكشف وعند كسب النقاط */
+function showFx(e, title, sub){
+  const d = document.createElement('div'); d.className = 'fx';
+  d.innerHTML = `<div class="fx-box"><div class="e">${e}</div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  document.body.appendChild(d); setTimeout(() => d.remove(), 3100);
+}
+function rain(n = 26){
+  const em = ['🎉','✨','⭐','💜','🎊', T[team] ? T[team].icon : '🛡️'];
+  for (let i = 0; i < n; i++) {
+    const f = document.createElement('span'); f.className = 'fly'; f.textContent = em[i % em.length];
+    f.style.left = Math.random() * 100 + 'vw'; f.style.animationDelay = Math.random() * .6 + 's'; f.style.fontSize = 28 + Math.random() * 26 + 'px';
+    document.body.appendChild(f); setTimeout(() => f.remove(), 3400);
+  }
+}
+function cheer(){
+  const t = st.task, a = st.sent, g = a ? LIVE.grade(t, a.v) : null;
+  if (t.kind === 'rate' || t.kind === 'ideas') return;
+  if (!a) return showFx('⏳', 'لم ترسلن إجابة هذه المرة', 'السؤال القادم لكنّ 💪');
+  if (!g) return showFx('✅', 'كشفت المعلمة الإجابة', 'قارنّ إجابتكنّ بالإجابة النموذجية 👇');
+  if (g.ok === g.total) { showFx('🎉', 'إجابة صحيحة!', `أحسنتنّ يا مجموعة ${T[team].name} ${T[team].icon}`); rain(); }
+  else if (g.ok > 0) showFx('👏', `${g.ok} من ${g.total} صحيحة`, 'قريبات جدًا… ركّزن في التالي!');
+  else showFx('💪', 'لا بأس!', 'راجعن الإجابة الصحيحة… والسؤال القادم لكنّ');
+}
 
 function drawIdeas(){ const box = $('#ideas'); if (box) box.innerHTML = st.ideas.map(x => `<span>${esc(x)}</span>`).join(''); updateFoot(); }
 

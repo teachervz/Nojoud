@@ -529,6 +529,23 @@ body.idle #hint{opacity:0}
 @keyframes clapUp{0%{transform:translate(0,0) scale(.4) rotate(0);opacity:0}12%{opacity:1;transform:translate(0,-6vh) scale(1.1)}
   100%{transform:translate(var(--dx),-75vh) scale(.9) rotate(var(--rot));opacity:0}}
 
+/* ---------- 🕌🇸🇦 شرائح القيم + مشاهد إضافية ---------- */
+.vq{position:relative;background:linear-gradient(135deg,#3B0764,#6D28D9);color:#fff;border-radius:var(--r);padding:30px 80px 24px;text-align:center;
+  box-shadow:var(--shadow);overflow:hidden}
+.vq::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(600px 200px at 50% -10%,rgba(255,255,255,.18),transparent 70%)}
+.vq-ic{position:absolute;top:22px;right:28px;font-size:54px;animation:floaty 4s ease-in-out infinite}
+.vq-text{font-family:'Amiri',serif;font-size:52px;font-weight:700;line-height:1.75}
+.vq mark{background:none;color:#FDE68A;text-shadow:0 0 22px rgba(253,230,138,.45)}
+.vq.law{background:linear-gradient(135deg,#064E3B,#047857)}
+.vq.law .vq-text{font-family:var(--font);font-size:42px;font-weight:800;line-height:1.6}
+.vq-src{font-size:24px;font-weight:700;opacity:.85;margin-top:2px}
+.vq-q{font-size:36px;font-weight:900;color:var(--pd);text-align:center}
+.t-value .rev-ic{font-size:54px}.t-value .rev-t{font-size:30px}.t-value .rev-content p{font-size:24px}
+.diag-card{width:470px;background:#fff;border-radius:32px;box-shadow:var(--shadow);overflow:hidden;border:3px solid var(--line)}
+.dg-head{background:#3F3D56;color:#fff;font-size:24px;font-weight:800;text-align:center;padding:10px}
+.diag-card svg{display:block;width:100%;padding:14px 18px 6px}
+.sms .vid{height:150px;margin:12px 0;border-radius:16px;background:linear-gradient(135deg,#52525B,#18181B);display:grid;place-items:center;color:#fff;font-size:56px}
+
 /* =========================================================
    📡 لوحة إجابات المجموعات المباشرة (على يمين الشاشة)
    ========================================================= */
@@ -588,6 +605,11 @@ body.live-on #live{transform:none}
 #lvReveal{background:linear-gradient(135deg,var(--p2),var(--pd));color:#fff;flex-basis:100%}
 #lvReveal.on{background:var(--ok)}
 #lvAward{background:var(--okS);color:#047857}
+.lv-tm{background:#FEF3C7 !important;color:#92400E !important}
+.lv-tm.run{background:var(--amber) !important;color:#fff !important;animation:pulseT 1s infinite}
+.lv-tm.warn{background:var(--bad) !important}
+@keyframes pulseT{50%{transform:scale(1.04)}}
+.lv-medal{font-size:2.2vmin;line-height:1}
 .lv-foot{display:flex;justify-content:space-between;gap:1vmin;padding:0 1.8vmin 1.4vmin;font-size:1.55vmin;color:var(--muted);font-weight:700}
 .lv-foot b{color:var(--pd);direction:ltr;display:inline-block}
 #lvConn::before{content:"●";margin-inline-end:.5vmin;color:var(--bad)}
@@ -638,6 +660,8 @@ body.live-on #live{transform:none}
   <div class="lv-dist" id="lvDist"></div>
   <div id="lvList"></div>
   <div class="lv-actions">
+    <button id="lvT30" class="lv-tm" data-sec="30">⏱ 30 ث</button>
+    <button id="lvT60" class="lv-tm" data-sec="60">⏱ 60 ث</button>
     <button id="lvReveal">🔓 كشف الإجابة على الأجهزة</button>
     <button id="lvAward">🏅 نقاط للإجابات الصحيحة</button>
     <button id="lvClear">🧹 مسح إجابات الشريحة</button>
@@ -814,7 +838,6 @@ R.title = {
       <div class="rv"><span class="pill">${LESSON.lessonNo} • ${LESSON.subject}</span></div>
       <h1 class="hero-title rv">${LESSON.title}</h1>
       <p class="hero-sub rv">${s.subtitle}</p>
-      <div class="hero-meta rv"><span>👩‍🏫 ${LESSON.teacher}</span><span>🏫 ${LESSON.school}</span></div>
       <div class="hero-teams rv"><b>⚔️ ${LESSON.teams.length} مجموعات تتنافس اليوم:</b>${LESSON.teams.map(t=>`<span style="--c:${t.color}">${t.icon} ${t.name}</span>`).join('')}</div>
       <div class="rv"><button class="btn primary lg start-btn">🚀 لنبدأ المهمة</button></div>
     </div>
@@ -1015,6 +1038,18 @@ R.reveal = {
     const open=r=>{ if(r.classList.contains('open')) return; r.classList.add('open'); sound.pop(); if(!$$('.rev:not(.open)',sec).length) sound.ding(); };
     $$('.rev',sec).forEach(r=>r.onclick=()=>open(r));
     $('.rev-all',sec).onclick=()=>$$('.rev',sec).forEach((r,i)=>setTimeout(()=>open(r),i*250));
+  }
+};
+
+/* قيمنا الدينية والوطنية: نص بارز + كشف تدريجي للربط */
+R.value = {
+  html:s=>`<div class="vq ${s.law?'law':''} rv"><span class="vq-ic">${s.icon||'✨'}</span><p class="vq-text">${s.quote}</p><div class="vq-src">${s.source||''}</div></div>
+    ${s.question?`<p class="vq-q rv">${s.question}</p>`:''}
+    <div class="reveal-grid rv" style="--n:${s.items.length};--h:${s.h||275}px">${s.items.map((it,k)=>`<button class="rev"><div class="rev-cover">${k+1}<small>اضغطي للكشف</small></div>
+      <div class="rev-content"><div class="rev-ic">${it.icon}</div><div class="rev-t">${it.t}</div>${it.d?`<p>${it.d}</p>`:''}</div></button>`).join('')}</div>`,
+  init:sec=>{
+    const open=r=>{ if(r.classList.contains('open')) return; r.classList.add('open'); sound.pop(); if(!$$('.rev:not(.open)',sec).length) celebrate($('.vq',sec),true); };
+    $$('.rev',sec).forEach(r=>r.onclick=()=>open(r));
   }
 };
 
@@ -1316,7 +1351,7 @@ const Live = (() => {
   const load=k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } };
   let want=load('lv-show')!=='0', hide=load('lv-hide')==='1';
   let slide=-1, task=null, answers={}, ideas={}, revealed=false, awarded=false, presence={};
-  let subs=[], lastSig={}, primed=false, primeT;
+  let subs=[], lastSig={}, primed=false, primeT, timer=null, timerEnded=false, allDone=false;
   const seen=new Set();
   const listen=(r,ev,fn)=>{ r.on(ev,fn); subs.push(()=>r.off(ev,fn)); };
   const noLive=()=>alert(LIVE.why==='config'
@@ -1334,7 +1369,7 @@ const Live = (() => {
   /* عند تغيير الشريحة: نُبلغ الأجهزة ونستمع لإجابات الشريحة الجديدة */
   function onSlide(n){
     slide=n; task=LIVE.taskFor(SLIDES[n]);
-    subs.forEach(f=>f()); subs=[]; answers={}; ideas={}; revealed=false; awarded=false; lastSig={};
+    subs.forEach(f=>f()); subs=[]; answers={}; ideas={}; revealed=false; awarded=false; lastSig={}; timer=null; allDone=false;
     primed=false; clearTimeout(primeT); primeT=setTimeout(()=>primed=true,1500);
     $('#liveBtn').classList.toggle('has',!!task);
     setOpen(LIVE.ok && want && !!task);
@@ -1347,6 +1382,7 @@ const Live = (() => {
       listen(LIVE.ref('answers/'+n),'value',s=>{ answers=s.val()||{}; draw(); });
       listen(LIVE.ref('reveal/'+n),'value',s=>{ revealed=!!s.val(); draw(); });
       listen(LIVE.ref('awarded/'+n),'value',s=>{ awarded=!!s.val(); draw(); });
+      listen(LIVE.ref('timer/'+n),'value',s=>{ timer=s.val(); timerEnded=!!timer&&LIVE.now()>=timer.end; tick(); });
       if(task.kind==='ideas') listen(LIVE.ref('ideas/'+n),'child_added',s=>{
         const d=s.val()||{}; if(!T[d.team]||!d.text) return;
         (ideas[d.team]=ideas[d.team]||[]).push(d.text);
@@ -1406,6 +1442,9 @@ const Live = (() => {
     }
     $('#lvQ').innerHTML='❓ '+(task.perTeam?'لكل مجموعة مهمة مختلفة — '+task.q:task.q);
     let n=0, fresh=false;
+    // 🥇 ترتيب أسرع المجموعات إجابةً صحيحة (حسب وقت الإرسال)
+    const medals={};
+    if(graded&&!masked) fastest().slice(0,3).forEach((k,i)=>medals[k]=['🥇','🥈','🥉'][i]);
     $('#lvList').innerHTML=T.map((t,k)=>{
       const a=answers[k], list=ideas[k]||[];
       const has = kind==='ideas' ? list.length>0 : !!(a&&a.v!=null);
@@ -1421,7 +1460,7 @@ const Live = (() => {
                 : `<div class="lv-ans">${ansHTML(kind==='ideas'?list:a.v)}</div>`;
       return `<div class="lv-row ${cls} ${isNew?'new':''}" style="--c:${t.color}"><div class="lv-team">
         <span class="lv-dot ${presence[k]?'on':''}" title="${presence[k]?'الجهاز متصل':'الجهاز غير متصل'}"></span>
-        <span>${t.icon}</span><b>${t.name}</b>${badge}<button class="lv-plus" data-k="${k}" title="منح نقطة">+1</button></div>${ans}</div>`;
+        <span>${t.icon}</span><b>${t.name}</b>${medals[k]?`<span class="lv-medal" title="ترتيب السرعة">${medals[k]}</span>`:''}${badge}<button class="lv-plus" data-k="${k}" title="منح نقطة">+1</button></div>${ans}</div>`;
     }).join('');
     const c=$('#lvCount'); c.textContent=`${n}/${T.length}`; c.classList.toggle('full',n===T.length);
     $('#lvDist').innerHTML=masked?'':distHTML();
@@ -1430,7 +1469,31 @@ const Live = (() => {
     const aw=$('#lvAward'); aw.style.display=graded?'':'none'; aw.disabled=awarded;
     aw.textContent=awarded?'✓ مُنحت النقاط':'🏅 نقاط للإجابات الصحيحة';
     if(fresh) sound.pop();
+    if(n===T.length&&!allDone&&primed){ allDone=true; sound.ding(); toast('🎉 كل المجموعات أجابت!'); }
+    if(n<T.length) allDone=false;
   }
+
+  // المجموعات ذات الإجابة الكاملة الصحيحة مرتبة من الأسرع
+  function fastest(){
+    return T.map((_,k)=>k).filter(k=>{ const a=answers[k], g=a&&LIVE.grade(task,a.v); return g&&g.ok===g.total; })
+      .sort((x,y)=>(answers[x].t||0)-(answers[y].t||0));
+  }
+
+  /* ⏱ المؤقت المتزامن مع الأجهزة */
+  setInterval(tick,250);
+  function tick(){
+    $$('.lv-tm').forEach(b=>{ b.classList.remove('run','warn'); b.textContent='⏱ '+b.dataset.sec+' ث'; });
+    if(!timer) return;
+    const left=Math.ceil((timer.end-LIVE.now())/1000), b=$(`.lv-tm[data-sec="${timer.sec}"]`)||$('#lvT30');
+    if(left>0){ b.classList.add('run'); b.classList.toggle('warn',left<=5); b.textContent=`⏸ ${fmt(left)}`; timerEnded=false; }
+    else { b.textContent='⏰ انتهى'; if(!timerEnded){ timerEnded=true; sound.bell(); toast('⏰ انتهى الوقت! الأجهزة مقفلة الآن'); } }
+  }
+  $$('.lv-tm').forEach(b=>b.onclick=()=>{
+    if(!task) return;
+    const running=timer&&timer.end>LIVE.now();
+    LIVE.ref('timer/'+slide).set(running?null:{ end:LIVE.now()+b.dataset.sec*1000, sec:+b.dataset.sec });
+    if(!running) sound.pop();
+  });
 
   /* أزرار اللوحة */
   $('#liveBtn').onclick=()=>toggle();
@@ -1442,19 +1505,22 @@ const Live = (() => {
     const pts=SLIDES[slide].points||LESSON.defaultPoints||1;
     const win=T.map((_,k)=>k).filter(k=>{ const a=answers[k], g=a&&LIVE.grade(task,a.v); return g&&g.ok===g.total; });
     if(!win.length){ toast('لا توجد إجابات صحيحة كاملة حتى الآن'); sound.wrong(); return; }
-    win.forEach(k=>addPoints(k,pts)); LIVE.ref('awarded/'+slide).set(true);
-    celebrate($('#lvList'),true); toast(`+${pts} لكل من: ${win.map(k=>T[k].icon+' '+T[k].name).join('، ')}`);
+    win.forEach(k=>addPoints(k,pts));
+    const first=fastest()[0]; if(first!=null) addPoints(first,1); // ⚡ نقطة إضافية للأسرع
+    LIVE.ref('awarded/'+slide).set(true);
+    celebrate($('#lvList'),true);
+    toast(`+${pts} لكل من: ${win.map(k=>T[k].icon+' '+T[k].name).join('، ')}${first!=null?` • ⚡ +1 للأسرع: ${T[first].name}`:''}`);
   };
   $('#lvClear').onclick=()=>{
     if(!confirm('مسح جميع إجابات المجموعات في هذه الشريحة؟')) return;
-    ['answers','ideas','reveal','awarded'].forEach(p=>LIVE.ref(p+'/'+slide).remove()); ideas={}; draw();
+    ['answers','ideas','reveal','awarded','timer'].forEach(p=>LIVE.ref(p+'/'+slide).remove()); ideas={}; draw();
   };
 
   function saveScores(){ if(LIVE.ok) LIVE.ready.then(()=>LIVE.ref('scores').set(scores.slice())); }
   function newSession(){
     if(!LIVE.ok) return noLive();
     if(!confirm('بدء حصة جديدة؟\nسيتم مسح كل إجابات المجموعات من الأجهزة وتصفير النقاط.')) return;
-    ['answers','ideas','reveal','awarded'].forEach(p=>LIVE.ref(p).remove());
+    ['answers','ideas','reveal','awarded','timer'].forEach(p=>LIVE.ref(p).remove());
     scores.fill(0); drawScores(); saveScores(); ideas={}; answers={}; seen.clear(); draw(); toast('بدأت حصة جديدة ✓');
   }
 

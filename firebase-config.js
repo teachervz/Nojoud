@@ -7,6 +7,7 @@
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyCdNN7Ateo-hfif01R_kXWMDYaIkI2EhQk",
   authDomain: "cyber-security-39844.firebaseapp.com",
+  databaseURL: "https://cyber-security-39844-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "cyber-security-39844",
   storageBucket: "cyber-security-39844.firebasestorage.app",
   messagingSenderId: "944452781667",
