@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الأمن السيبراني | عرض تفاعلي</title>
+<!-- خط عربي واضح (إذا لم يتوفر إنترنت سيُستخدم خط Tahoma تلقائيًا) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   1) الألوان والهوية البصرية — يمكن تغيير الألوان من هنا
+   ========================================================= */
+:root{
+  --p:#7C3AED; --p2:#8B5CF6; --pd:#5B21B6; --pdd:#2E1065;
+  --ps:#EDE9FE; --pss:#F7F4FF; --line:#E4DCFB;
+  --pink:#EC4899; --teal:#14B8A6; --amber:#F59E0B; --sky:#0EA5E9;
+  --ok:#10B981; --okS:#E7FBF3; --bad:#F43F5E; --badS:#FFF0F3;
+  --ink:#2A1454; --muted:#6B5A8E;
+  --r:28px;
+  --shadow:0 18px 40px -18px rgba(76,29,149,.35);
+  --shadow-s:0 8px 20px -10px rgba(76,29,149,.35);
+  --font:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);color:var(--ink);
+  background:#1c1036;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body.idle{cursor:none}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;line-height:inherit}
+input{font-family:inherit;-webkit-user-select:text;user-select:text}
+::-webkit-scrollbar{display:none}
+
+/* =========================================================
+   2) مسرح العرض 16:9 (1920×1080) ويتم تكبيره/تصغيره ليملأ الشاشة
+   ========================================================= */
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;overflow:hidden;
+  transform-origin:center center;
+  background:
+    radial-gradient(1100px 700px at 105% -5%, #E9DDFF 0%, transparent 60%),
+    radial-gradient(900px 600px at -5% 105%, #FDE3F1 0%, transparent 60%),
+    #FBFAFF;}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(124,58,237,.13) 2px,transparent 2.5px);background-size:46px 46px;
+  -webkit-mask-image:linear-gradient(120deg,#000 0%,transparent 45%,transparent 60%,#000 100%);
+          mask-image:linear-gradient(120deg,#000 0%,transparent 45%,transparent 60%,#000 100%);}
+.pgnum{position:absolute;left:44px;bottom:30px;font-size:22px;font-weight:700;color:#B7A8DA;z-index:5;direction:ltr}
+.brand{position:absolute;right:44px;bottom:30px;font-size:22px;font-weight:700;color:#B7A8DA;z-index:5}
+
+/* ---------- الشرائح وتأثيرات الانتقال ---------- */
+.slide{position:absolute;inset:0;visibility:hidden;opacity:0;pointer-events:none}
+.slide.active{visibility:visible;opacity:1;pointer-events:auto;z-index:3}
+.slide.leaving{visibility:visible;z-index:2;animation:slideOut .45s ease forwards}
+.slide.in-fade{animation:inFade .7s ease backwards}
+.slide.in-zoom{animation:inZoom .75s cubic-bezier(.2,.8,.2,1) backwards}
+.slide.in-slide-next{animation:inSlideN .7s cubic-bezier(.2,.8,.2,1) backwards}
+.slide.in-slide-prev{animation:inSlideP .7s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes slideOut{to{opacity:0;transform:scale(.98)}}
+@keyframes inFade{from{opacity:0}}
+@keyframes inZoom{from{opacity:0;transform:scale(.92)}}
+@keyframes inSlideN{from{opacity:0;transform:translateX(-90px)}}
+@keyframes inSlideP{from{opacity:0;transform:translateX(90px)}}
+/* ظهور العناصر بالتتابع */
+.slide.active .rv{animation:rise .7s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i,0) * 110ms + 180ms)}
+@keyframes rise{from{opacity:0;transform:translateY(34px)}}
+
+.slide-inner{position:absolute;inset:64px 110px 110px;display:flex;flex-direction:column;gap:22px}
+.content{flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px;min-height:0}
+.tag{align-self:flex-start;background:#fff;border:2px solid var(--line);color:var(--pd);padding:6px 26px;
+  border-radius:999px;font-size:26px;font-weight:800;box-shadow:var(--shadow-s)}
+.title{font-size:66px;font-weight:900;color:var(--pdd);line-height:1.25}
+.title::after{content:"";display:block;width:120px;height:8px;border-radius:9px;margin-top:10px;
+  background:linear-gradient(90deg,var(--pink),var(--p2))}
+.lead{font-size:36px;color:var(--muted);font-weight:700;line-height:1.5}
+.lead.ok-text{color:var(--ok)}
+.center-row{display:flex;justify-content:center;gap:20px}
+
+/* ---------- أزرار عامة ---------- */
+.btn{font-size:30px;font-weight:800;padding:14px 38px;border-radius:999px;transition:transform .2s,box-shadow .2s,background .2s,opacity .2s}
+.btn.primary{background:linear-gradient(135deg,var(--p2),var(--pd));color:#fff;box-shadow:0 12px 26px -10px rgba(109,40,217,.7)}
+.btn.ghost{background:#fff;color:var(--pd);border:3px solid var(--ps);box-shadow:var(--shadow-s)}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.lg{font-size:38px;padding:18px 54px}
+.btn:hover{transform:translateY(-3px)}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+.shake{animation:shake .5s}
+@keyframes shake{20%{transform:translateX(-14px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(5px)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes floaty{50%{transform:translateY(-18px) rotate(4deg)}}
+
+/* ---------- بطاقة السؤال + الخيارات ---------- */
+.q-card{background:#fff;border-radius:var(--r);padding:24px 36px;box-shadow:var(--shadow);display:flex;gap:22px;
+  align-items:center;font-size:40px;font-weight:800;line-height:1.45;border-right:12px solid var(--p)}
+.q-card.big{font-size:42px}
+.q-ic{font-size:54px;flex:none}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.opt{position:relative;background:#fff;border:3px solid var(--line);border-radius:26px;padding:20px 28px;font-size:34px;font-weight:800;
+  display:flex;align-items:center;gap:20px;text-align:right;box-shadow:var(--shadow-s);transition:transform .2s,border-color .2s,background .2s,opacity .3s}
+.opt:hover{transform:translateY(-4px);border-color:var(--p2)}
+.opt:active{transform:scale(.97)}
+.opt-ic{font-size:42px;width:74px;height:74px;flex:none;border-radius:50%;background:var(--pss);display:flex;align-items:center;justify-content:center}
+.opt.correct{background:var(--okS);border-color:var(--ok);color:#065F46}
+.opt.correct::after{content:"✓";position:absolute;left:24px;font-size:44px;color:var(--ok);animation:pop .4s}
+.opt.wrong{border-color:var(--bad);background:var(--badS);animation:shake .5s}
+.opt.dim{opacity:.4;pointer-events:none}
+.feedback{min-height:60px;font-size:40px;font-weight:900;text-align:center}
+.feedback.ok{color:var(--ok)} .feedback.bad{color:var(--pink)}
+.feedback.pop{animation:pop .45s}
+.explain{background:#FFF8EA;border:3px dashed #FCD38A;border-radius:24px;padding:16px 28px;font-size:29px;font-weight:700;line-height:1.55;
+  opacity:0;transform:translateY(14px);transition:.5s}
+.explain.show{opacity:1;transform:none}
+
+.mcq{flex:1;display:flex;gap:60px;align-items:center;min-height:0}
+.mcq-main{flex:1;display:flex;flex-direction:column;gap:22px}
+.scene{flex:none}
+
+/* مشهد الجوال */
+.phone{width:380px;height:680px;border:14px solid #22123F;border-radius:58px;background:linear-gradient(170deg,#3B1C7A,#1A0E33);
+  position:relative;box-shadow:0 30px 60px -20px rgba(40,10,90,.6);padding:70px 22px 22px;animation:floaty 5s ease-in-out infinite}
+.phone::before{content:"";position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;border-radius:20px;background:#22123F}
+.sms-head{color:#D9CCFF;font-size:20px;font-weight:700;margin-bottom:14px;text-align:center}
+.sms{background:#fff;border-radius:26px 26px 6px 26px;padding:20px;font-size:23px;line-height:1.6;font-weight:600;color:#222}
+.sms .link{display:block;direction:ltr;text-align:left;color:#2563EB;text-decoration:underline;margin-top:8px;font-size:20px}
+.sms-time{color:#9F8FD0;font-size:18px;margin-top:10px;text-align:left}
+.scene-card{width:420px;height:520px;border-radius:40px;background:linear-gradient(160deg,var(--p2),var(--pd));color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:30px;box-shadow:var(--shadow)}
+.scene-card .sc-big{font-size:150px;animation:floaty 4s ease-in-out infinite}
+.scene-card .sc-t{font-size:36px;font-weight:900;line-height:1.4}
+.scene-card .sc-s{font-size:24px;opacity:.8;direction:ltr}
+
+/* ---------- الشريحة الترحيبية ---------- */
+.hero{flex:1;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:40px}
+.pill{display:inline-block;background:var(--ps);color:var(--pd);font-size:30px;font-weight:800;padding:8px 30px;border-radius:999px}
+.hero-title{font-size:150px;font-weight:900;line-height:1.15;margin:18px 0 8px;
+  background:linear-gradient(120deg,var(--pdd),var(--p) 55%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{font-size:44px;font-weight:700;color:var(--muted);line-height:1.5;margin-bottom:26px}
+.hero-meta{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:36px}
+.hero-meta span{background:#fff;border:2px solid var(--line);border-radius:999px;padding:6px 24px;font-size:26px;font-weight:700;color:var(--muted)}
+.hero-art{position:relative;width:600px;height:600px;justify-self:center}
+.hero-art svg{width:100%;height:100%;animation:floaty 6s ease-in-out infinite}
+.orbit{transform-origin:200px 200px;animation:spin 30s linear infinite}
+.orbit.rev{animation-direction:reverse;animation-duration:22s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.float{position:absolute;font-size:74px;animation:floaty 4.5s ease-in-out infinite}
+.f1{top:4%;right:6%}.f2{bottom:10%;right:0;animation-delay:-1.5s}.f3{top:12%;left:2%;animation-delay:-3s}.f4{bottom:4%;left:12%;animation-delay:-2s}
+
+/* ---------- الأهداف ---------- */
+.goals{display:flex;flex-direction:column;gap:16px;width:1400px;align-self:center}
+.goal{width:100%;display:flex;align-items:center;gap:24px;background:#fff;border:3px solid var(--line);border-radius:26px;
+  padding:14px 28px;font-size:34px;font-weight:800;text-align:right;box-shadow:var(--shadow-s);transition:.25s}
+.goal:hover{border-color:var(--p2);transform:translateX(-8px)}
+.goal-n{width:62px;height:62px;border-radius:50%;background:var(--ps);color:var(--pd);display:flex;align-items:center;justify-content:center;flex:none}
+.goal-ic{font-size:44px}
+.goal-t{flex:1}
+.goal-check{width:58px;height:58px;border-radius:50%;border:3px dashed var(--line);display:flex;align-items:center;justify-content:center;color:transparent;font-size:34px}
+.goal.done{background:var(--okS);border-color:var(--ok)}
+.goal.done .goal-check{background:var(--ok);border:0;color:#fff;animation:pop .4s}
+.hint-sm{font-size:26px;color:#9C8BC4;font-weight:700;text-align:center}
+
+/* ---------- العصف الذهني ---------- */
+.bs{flex:1;display:flex;gap:36px;min-height:0}
+.bs-side{width:560px;display:flex;flex-direction:column;gap:22px;justify-content:center}
+.bs-prompt{background:#fff;border-radius:var(--r);padding:26px 30px;font-size:34px;font-weight:800;line-height:1.5;box-shadow:var(--shadow);border-right:10px solid var(--pink)}
+.bs-input{display:flex;gap:12px}
+.bs-input input{flex:1;min-width:0;font-size:30px;padding:12px 24px;border-radius:999px;border:3px solid var(--line);outline:none;background:#fff;color:var(--ink)}
+.bs-input input:focus{border-color:var(--p2)}
+.bs-btns{display:flex;gap:12px;flex-wrap:wrap}
+.bs-btns .btn{font-size:26px;padding:12px 26px}
+.bs-area{flex:1;position:relative;background:#fff;border-radius:36px;border:3px dashed var(--line);overflow:hidden}
+.bs-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:230px;height:230px;border-radius:50%;
+  background:linear-gradient(140deg,var(--p2),var(--pd));color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:34px;font-weight:900;line-height:1.3;box-shadow:0 0 0 18px var(--ps),var(--shadow);z-index:2}
+.bubble{position:absolute;transform:translate(-50%,-50%);background:#fff;border:3px solid var(--c);color:var(--c);
+  padding:8px 24px;border-radius:999px;font-size:28px;font-weight:800;white-space:nowrap;box-shadow:var(--shadow-s);animation:bubIn .5s cubic-bezier(.3,1.6,.5,1) backwards}
+@keyframes bubIn{from{transform:translate(-50%,-50%) scale(0);opacity:0}}
+
+/* ---------- الفراغات ---------- */
+.def-card{background:#fff;border-radius:36px;padding:40px 50px;box-shadow:var(--shadow);border-top:12px solid var(--p)}
+.def-src{font-size:28px;font-weight:800;color:var(--pink);margin-bottom:10px}
+.def-text{font-size:42px;font-weight:700;line-height:2.1}
+.blank{position:relative;display:inline-block;margin:0 6px;padding:0 18px;line-height:1.5;border-radius:16px;background:var(--pss);
+  border-bottom:5px dashed var(--p2);font-size:42px;font-weight:900;transition:.3s}
+.blank span{color:transparent}
+.blank::after{content:"؟";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--p2)}
+.blank:hover{background:var(--ps)}
+.blank.open{background:#F3EDFF;border-bottom-style:solid}
+.blank.open span{color:var(--pd);animation:pop .4s;display:inline-block}
+.blank.open::after{content:none}
+.note-card{display:flex;align-items:center;gap:26px;background:linear-gradient(135deg,#fff,var(--pss));border:3px solid var(--line);
+  border-radius:30px;padding:22px 34px;font-size:30px;font-weight:700;line-height:1.55}
+.note-card .ni{font-size:70px}
+
+/* ---------- البطاقات المقلوبة ---------- */
+.cards{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:28px}
+.fc-wrap{perspective:1500px;height:var(--h,500px)}
+.fc{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.2,.8,.2,1)}
+.fc-wrap:hover .fc:not(.flipped){transform:translateY(-8px)}
+.fc.flipped{transform:rotateY(180deg)}
+.fc-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:var(--r);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center}
+.fc-front{background:#fff;border:3px solid var(--line);border-top:14px solid var(--c);box-shadow:var(--shadow)}
+.fc-back{transform:rotateY(180deg);color:#fff;background:var(--c);
+  background:linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 65%,#1e0b4a));box-shadow:var(--shadow)}
+.fc-ic{font-size:96px;animation:floaty 5s ease-in-out infinite}
+.fc-title{font-size:36px;font-weight:900;line-height:1.35}
+.fc-title.sm{font-size:30px;opacity:.9}
+.fc-back p{font-size:28px;font-weight:600;line-height:1.6}
+.fc-hint{font-size:22px;color:#A393CC;font-weight:700}
+/* نص الآيات والأحاديث على ظهر البطاقة */
+.fc-back .ayah{display:block;font-family:'Amiri',serif;font-size:36px;font-weight:700;line-height:1.7;margin-bottom:4px}
+.fc-back .ref{display:block;font-size:22px;opacity:.85;margin-bottom:12px}
+
+/* ---------- لعبة الترتيب ---------- */
+.slots{display:flex;align-items:center;justify-content:center;gap:10px}
+.slot{width:222px;height:170px;border:4px dashed var(--line);border-radius:26px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.6);transition:.3s}
+.slot-n{font-size:64px;font-weight:900;color:#D6CCF2}
+.slot.filled{border-style:solid;border-color:var(--p2);background:#fff;box-shadow:var(--shadow-s);cursor:pointer}
+.slot.filled:hover{transform:translateY(-4px)}
+.slot.sel{box-shadow:0 0 0 6px rgba(124,58,237,.25)}
+.placed{display:flex;flex-direction:column;align-items:center;animation:pop .45s}
+.placed .pi{font-size:52px}.placed b{font-size:30px}.placed small{font-size:19px;color:var(--muted);direction:ltr}
+.slot-arrow{font-size:34px;color:#C9BCEB;font-weight:900}
+.pool{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;min-height:90px}
+.chip-stage{font-size:32px;font-weight:800;padding:14px 32px;background:#fff;border:3px solid var(--line);border-radius:999px;box-shadow:var(--shadow-s);transition:.25s}
+.chip-stage:hover{border-color:var(--p2);transform:translateY(-4px)}
+.chip-stage.gone{opacity:0;transform:scale(.5);pointer-events:none}
+.order-info{background:#fff;border-radius:26px;padding:20px 32px;display:flex;gap:22px;align-items:center;font-size:31px;font-weight:700;line-height:1.5;
+  min-height:120px;border-right:10px solid var(--teal);box-shadow:var(--shadow-s)}
+.order-info .oi-ic{font-size:54px}
+
+/* ---------- البصمة الرقمية ---------- */
+.fp-wrap{flex:1;display:flex;gap:36px;min-height:0}
+.fp-side{width:640px;display:flex;flex-direction:column;gap:18px;justify-content:center}
+.fp-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fp-act{display:flex;align-items:center;gap:12px;background:#fff;border:3px solid var(--line);border-radius:20px;padding:12px 18px;font-size:25px;font-weight:800;text-align:right;transition:.25s}
+.fp-act span{font-size:36px}
+.fp-act:hover{border-color:var(--p2);transform:translateY(-3px)}
+.fp-act.used{background:var(--ps);opacity:.55;pointer-events:none}
+.fp-board{flex:1;position:relative;background:linear-gradient(170deg,#fff,var(--pss));border:3px solid var(--line);border-radius:36px;overflow:hidden}
+.fp-counter{position:absolute;top:22px;right:26px;background:#fff;border-radius:999px;padding:8px 26px;font-size:30px;font-weight:800;box-shadow:var(--shadow-s);z-index:3}
+.fp-counter b{color:var(--pink);font-size:38px}
+.fp-reveal{position:absolute;top:22px;left:26px;z-index:3;font-size:26px!important;padding:10px 26px!important}
+.foot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;animation:bubIn .5s backwards}
+.foot .fi{font-size:58px;filter:drop-shadow(0 6px 8px rgba(80,30,160,.25))}
+.foot .fl{background:var(--pdd);color:#fff;font-size:20px;font-weight:700;padding:3px 14px;border-radius:999px;white-space:nowrap}
+.fp-def{position:absolute;left:24px;right:24px;bottom:24px;z-index:4;background:linear-gradient(135deg,var(--p2),var(--pd));color:#fff;
+  border-radius:28px;padding:24px 32px;font-size:31px;font-weight:700;line-height:1.6;transform:translateY(130%);transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.fp-def.show{transform:none}
+.fp-def b{color:#FDE68A}
+
+/* ---------- لعبة التصنيف ---------- */
+.sort-wrap{flex:1;display:grid;grid-template-columns:1fr 620px 1fr;gap:34px;min-height:0}
+.bucket{background:#fff;border:4px solid var(--c);border-radius:34px;display:flex;flex-direction:column;padding:22px;gap:14px;transition:.25s;text-align:right;overflow:hidden}
+.bucket:hover{transform:translateY(-5px);box-shadow:0 20px 36px -16px var(--c)}
+.bucket:active{transform:scale(.98)}
+.bk-head{display:flex;align-items:center;gap:14px;font-size:36px;font-weight:900;color:var(--c)}
+.bk-ic{font-size:60px}
+.bk-count{margin-inline-start:auto;background:var(--c);color:#fff;border-radius:999px;min-width:64px;text-align:center;font-size:32px;padding:2px 14px}
+.bk-list{display:flex;flex-direction:column;gap:8px;overflow:hidden;flex:1}
+.bk-chip{font-size:22px;font-weight:700;background:var(--pss);border-right:6px solid var(--c);padding:6px 14px;border-radius:12px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pop .4s}
+.bk-empty{font-size:24px;color:#B5A8D6;font-weight:700;text-align:center;margin-top:30px}
+.sort-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.sort-prog{font-size:28px;font-weight:800;color:var(--muted);background:#fff;padding:4px 26px;border-radius:999px;border:2px solid var(--line);direction:ltr}
+.sort-card{width:100%;min-height:330px;background:linear-gradient(160deg,#fff,var(--pss));border:3px solid var(--line);border-radius:36px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:38px;font-weight:900;text-align:center;padding:30px;line-height:1.45;box-shadow:var(--shadow)}
+.sort-card .sc-ic{font-size:96px}
+.sort-card.enter{animation:pop .45s}
+.sort-hint{font-size:25px;color:#A393CC;font-weight:700}
+
+/* ---------- الكشف التدريجي ---------- */
+.reveal-grid{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:26px}
+.rev{position:relative;height:var(--h,300px);border-radius:var(--r);overflow:hidden;background:#fff;border:3px solid var(--line);box-shadow:var(--shadow-s);transition:transform .25s}
+.rev:hover{transform:translateY(-5px)}
+.rev-cover{position:absolute;inset:0;z-index:2;background:linear-gradient(140deg,var(--p2),var(--pd));color:#fff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:96px;font-weight:900;transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .6s}
+.rev-cover small{font-size:24px;font-weight:700;opacity:.8}
+.rev:nth-child(4n+2) .rev-cover{background:linear-gradient(140deg,#F472B6,#BE185D)}
+.rev:nth-child(4n+3) .rev-cover{background:linear-gradient(140deg,#2DD4BF,#0F766E)}
+.rev:nth-child(4n+4) .rev-cover{background:linear-gradient(140deg,#FBBF24,#B45309)}
+.rev.open .rev-cover{transform:translateY(-105%);opacity:0}
+.rev-content{height:100%;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+.rev-ic{font-size:66px}.rev-t{font-size:32px;font-weight:900;line-height:1.35}.rev-content p{font-size:25px;color:var(--muted);font-weight:600;line-height:1.5}
+
+/* ---------- مراجعة الدرس السابق ---------- */
+.recap{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.rc{position:relative;background:#fff;border-radius:var(--r);padding:22px 26px 20px;box-shadow:var(--shadow-s);border-top:12px solid var(--c);
+  display:flex;flex-direction:column;gap:10px;min-height:330px}
+.rc-head{display:flex;align-items:center;gap:12px}
+.rc-n{width:50px;height:50px;border-radius:50%;background:var(--c);color:#fff;font-size:28px;font-weight:900;display:grid;place-items:center;flex:none}
+.rc-kind{font-size:21px;font-weight:800;color:var(--c);background:var(--pss);padding:3px 16px;border-radius:999px}
+.rc-q{font-size:28px;font-weight:800;line-height:1.5;flex:1}
+.rc-a{font-size:24px;font-weight:800;color:var(--ok);background:var(--okS);border-radius:16px;padding:10px 16px;line-height:1.5;display:none}
+.rc.open .rc-a{display:block;animation:pop .4s}
+.rc-btns{display:flex;gap:10px}
+.rc-btns .btn{font-size:22px;padding:8px 22px}
+.rc.open .rc-show{display:none}
+
+/* ---------- سجل الخادم ---------- */
+.term-wrap{flex:1;display:grid;grid-template-columns:600px 1fr;gap:34px;min-height:0}
+.browser{background:#fff;border-radius:26px;overflow:hidden;border:3px solid var(--line);display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.br-bar{background:#F1EDFB;padding:14px 18px;display:flex;gap:14px;align-items:center}
+.dots{display:flex;gap:8px}.dots i{width:16px;height:16px;border-radius:50%;background:#F87171}.dots i:nth-child(2){background:#FBBF24}.dots i:nth-child(3){background:#34D399}
+.br-url{flex:1;background:#fff;border-radius:999px;padding:4px 20px;font-size:21px;direction:ltr;text-align:left;color:var(--muted)}
+.br-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:26px;text-align:center;font-size:30px;font-weight:700}
+.br-ic{font-size:110px}
+.terminal{background:#170D2E;border-radius:26px;color:#E9E3FF;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.term-head{background:#2A1850;padding:12px 26px;font-size:24px;font-weight:800;display:flex;justify-content:space-between}
+.rec{color:#FB7185;direction:ltr}.rec.on{animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.term-lines{padding:18px 28px;display:flex;flex-direction:column;gap:6px;font-size:26px}
+.term-empty{color:#7C6BA8;font-size:26px;margin-top:20px}
+.tl{display:flex;gap:18px;align-items:baseline;animation:typeIn .35s}
+@keyframes typeIn{from{opacity:0;transform:translateX(20px)}}
+.tl .k{color:#C4B5FD;min-width:240px;font-weight:700}
+.tl .k::before{content:"▸ ";color:#F472B6}
+.tl .v{direction:ltr;font-family:Consolas,'Courier New',monospace;color:#6EE7B7;font-weight:700}
+.term-q{background:#fff;border-radius:26px;padding:16px 30px;box-shadow:var(--shadow-s);display:flex;flex-direction:column;gap:8px}
+.term-q .row{display:flex;align-items:center;gap:20px;font-size:31px;font-weight:800}
+.term-q .row p{flex:1}
+.term-q .btn{font-size:24px;padding:8px 24px}
+.term-a{font-size:28px;font-weight:700;color:var(--pd);line-height:1.55;display:none}
+.term-a.show{display:block;animation:pop .4s}
+
+/* ---------- فكّري زاوجي شاركي ---------- */
+.phases{display:flex;align-items:center;justify-content:center;gap:18px}
+.phase{width:450px;background:#fff;border:4px solid transparent;border-radius:32px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow);transition:.3s}
+.phase:hover{transform:translateY(-5px)}
+.ph-ic{font-size:70px}.ph-name{font-size:38px;font-weight:900;color:var(--c)}.ph-desc{font-size:25px;color:var(--muted);font-weight:700}
+.ph-time{font-size:48px;font-weight:900;direction:ltr;color:var(--ink)}
+.phase.active{border-color:var(--c);transform:scale(1.05);box-shadow:0 22px 40px -16px var(--c)}
+.phase.active .ph-time{color:var(--c)}
+.phase.done .ph-time::after{content:" ✓";color:var(--ok)}
+.ph-arrow{font-size:40px;color:#C9BCEB;font-weight:900}
+.chips{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.chip{background:#fff;border:2px solid var(--line);padding:8px 22px;border-radius:999px;font-size:26px;font-weight:800;box-shadow:var(--shadow-s)}
+.chip.lg{font-size:30px;padding:10px 28px}
+.tps-chips{opacity:0;transform:translateY(10px);transition:.5s}
+.tps-chips.show{opacity:1;transform:none}
+
+/* ---------- المقارنة ---------- */
+.cmp{background:#fff;border-radius:32px;padding:18px 30px;box-shadow:var(--shadow)}
+.cmp-head,.cmp-row{display:grid;grid-template-columns:230px 1fr 1fr;gap:24px;align-items:center}
+.cmp-col{text-align:center;padding:12px;border-radius:24px;background:var(--pss);background:color-mix(in srgb,var(--c) 10%,white)}
+.cmp-ic{font-size:54px;line-height:1.2}.cmp-name{font-size:34px;font-weight:900;color:var(--c)}.cmp-an{font-size:23px;font-weight:700;color:var(--muted)}
+.cmp-row{padding:14px 0;border-top:2px dashed var(--line);font-size:27px;font-weight:700;opacity:.08;transition:opacity .5s,transform .5s;transform:translateY(10px)}
+.cmp-row.show{opacity:1;transform:none}
+.cmp-k{font-weight:900;color:var(--pd);font-size:29px}
+.cmp-v{text-align:center;line-height:1.45}
+
+/* ---------- المطابقة ---------- */
+.match{display:grid;grid-template-columns:470px 1fr;gap:0 60px}
+.m-col{display:flex;flex-direction:column;gap:13px}
+.m-item{position:relative;min-height:76px;background:#fff;border:3px solid var(--line);border-radius:22px;font-size:27px;font-weight:700;
+  padding:8px 26px;text-align:right;display:flex;align-items:center;transition:.25s;box-shadow:var(--shadow-s)}
+.m-item:hover{border-color:var(--p2)}
+.m-item.term{justify-content:space-between;font-size:30px;font-weight:900;color:var(--pd);background:var(--pss)}
+.m-item.term small{font-size:19px;color:var(--muted);direction:ltr;font-weight:700}
+.m-item.sel{border-color:var(--p);box-shadow:0 0 0 6px rgba(124,58,237,.22);transform:scale(1.02)}
+.m-item.matched{border-color:var(--mc);background:#fff;pointer-events:none;padding-left:76px}
+.m-item.matched::after{content:attr(data-badge);position:absolute;left:16px;top:50%;margin-top:-22px;width:44px;height:44px;border-radius:50%;
+  background:var(--mc);color:#fff;font-size:24px;font-weight:900;display:flex;align-items:center;justify-content:center;animation:pop .4s}
+
+/* ---------- صح أم خطأ ---------- */
+.tf-list{display:flex;flex-direction:column;gap:14px}
+.tf-row{display:grid;grid-template-columns:64px 1fr auto;gap:22px;align-items:center;background:#fff;border:3px solid var(--line);border-radius:24px;padding:12px 24px;box-shadow:var(--shadow-s);transition:.3s}
+.tf-n{width:56px;height:56px;border-radius:50%;background:var(--ps);color:var(--pd);font-size:28px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.tf-t{font-size:31px;font-weight:800;line-height:1.45}
+.tf-why{font-size:23px;font-weight:700;color:var(--muted);display:none;margin-top:2px}
+.tf-why.show{display:block;animation:pop .4s}
+.tf-why.bad{color:var(--pink)}
+.tf-btns{display:flex;gap:12px}
+.tf-b{font-size:27px;font-weight:900;padding:8px 26px;border-radius:999px;border:3px solid;background:#fff;transition:.2s}
+.tf-b:hover{transform:translateY(-3px)}
+.tf-b.yes{color:#059669;border-color:#A7F3D0}.tf-b.no{color:#E11D48;border-color:#FECDD3}
+.tf-row.solved{border-color:var(--ok);background:#F5FFFA}
+.tf-row.solved .tf-n{background:var(--ok);color:#fff}
+.tf-row.solved .tf-b{pointer-events:none;opacity:.35}
+.tf-row.solved .tf-b.right{opacity:1;background:var(--ok);color:#fff;border-color:var(--ok)}
+
+/* ---------- المؤقت ---------- */
+.timer-box{display:flex;align-items:center;gap:16px}
+.timer{position:relative;width:140px;height:140px;flex:none}
+.timer svg{width:100%;height:100%;transform:rotate(-90deg)}
+.tr-bg{fill:#fff;stroke:var(--ps);stroke-width:10}
+.tr-fg{fill:none;stroke:var(--p);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .3s}
+.tr-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;direction:ltr}
+.timer-box.warn .tr-fg{stroke:var(--amber)}
+.timer-box.end .tr-fg{stroke:var(--bad)}
+.timer-box.end .timer{animation:pulse 1s 3}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.tr-btns{display:flex;flex-direction:column;gap:10px}
+.tbtn{width:60px;height:60px;border-radius:50%;background:#fff;border:3px solid var(--line);font-size:26px;color:var(--pd);font-weight:900;transition:.2s}
+.tbtn:hover{border-color:var(--p2);transform:scale(1.08)}
+.timer-box.big{flex-direction:column}
+.timer-box.big .timer{width:330px;height:330px}
+.timer-box.big .tr-txt{font-size:92px}
+.timer-box.big .tr-btns{flex-direction:row}
+.timer-box.big .tbtn{width:74px;height:74px;font-size:32px}
+
+/* ---------- التعلم التعاوني ---------- */
+.grp-top{display:flex;align-items:center;justify-content:space-between;gap:30px}
+
+/* ---------- تحدي الدقيقة ---------- */
+.ch-wrap{flex:1;display:grid;grid-template-columns:440px 1fr;gap:50px;align-items:center}
+.ch-left{display:flex;flex-direction:column;align-items:center;gap:24px}
+.ch-score{font-size:32px;font-weight:900;background:#fff;border-radius:999px;padding:10px 32px;box-shadow:var(--shadow-s)}
+.ch-score b{color:var(--ok);font-size:40px}
+.ch-card{background:#fff;border-radius:36px;padding:36px 44px;min-height:360px;display:flex;flex-direction:column;justify-content:center;gap:18px;box-shadow:var(--shadow);border-top:14px solid var(--amber)}
+.ch-num{font-size:26px;font-weight:800;color:var(--muted)}
+.ch-q{font-size:46px;font-weight:900;line-height:1.4}
+.ch-q.enter{animation:pop .4s}
+.ch-a{font-size:34px;color:var(--ok);font-weight:900;opacity:0;transition:.4s;min-height:50px}
+.ch-a.show{opacity:1}
+.ch-btns{display:flex;gap:16px;justify-content:center;margin-top:22px}
+
+/* ---------- خريطة المراجعة ---------- */
+.map{flex:1;position:relative;min-height:0}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.map line{stroke:#D5C8F5;stroke-width:3;stroke-dasharray:8 10;vector-effect:non-scaling-stroke}
+.node{position:absolute;transform:translate(-50%,-50%);background:#fff;border:4px solid var(--c);color:var(--ink);border-radius:999px;padding:10px 28px;
+  font-size:28px;font-weight:900;display:flex;gap:10px;align-items:center;white-space:nowrap;box-shadow:var(--shadow-s);transition:background .3s,color .3s,transform .25s}
+.node:hover{transform:translate(-50%,-50%) scale(1.07)}
+.node.seen{background:var(--c);color:#fff}
+.map-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;min-height:290px;border-radius:44px;
+  background:linear-gradient(145deg,var(--p2),var(--pd));color:#fff;padding:26px 34px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:8px;box-shadow:0 0 0 16px var(--ps),var(--shadow)}
+.map-center .mc-ic{font-size:58px}.map-center .mc-t{font-size:36px;font-weight:900}.map-center .mc-d{font-size:26px;font-weight:600;line-height:1.55}
+.map-center.enter{animation:pop .4s}
+
+/* ---------- الختام ---------- */
+.closing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center}
+.cl-shield{font-size:140px;animation:floaty 4s ease-in-out infinite}
+.cl-title{font-size:92px;font-weight:900;line-height:1.2;background:linear-gradient(120deg,var(--pdd),var(--p),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.cl-msg{font-size:38px;font-weight:700;color:var(--muted)}
+.cl-tips{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:1500px}
+.cl-rate{display:flex;align-items:center;gap:18px;font-size:32px;font-weight:800;background:#fff;border-radius:999px;padding:10px 20px 10px 34px;box-shadow:var(--shadow-s);margin-top:10px}
+.rate{font-size:62px;transition:transform .2s;line-height:1}
+.rate:hover{transform:scale(1.2) rotate(-6deg)}
+.rate.on{transform:scale(1.25)}
+.rate-msg{font-size:32px;font-weight:800;color:var(--pd);min-height:50px}
+
+/* =========================================================
+   3) شريط التحكم + التلميح + النقاط (خارج المسرح)
+   ========================================================= */
+#bar{position:fixed;left:50%;bottom:2.2vmin;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:1vmin;
+  background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid #E4DCFB;
+  border-radius:999px;padding:.8vmin 1.2vmin;box-shadow:0 10px 30px -10px rgba(60,20,120,.45);transition:opacity .4s,transform .4s}
+#bar button{font-size:2.1vmin;font-weight:800;color:var(--pd);padding:.9vmin 2vmin;border-radius:999px;transition:background .2s,transform .15s;white-space:nowrap}
+#bar button:hover{background:var(--ps)}
+#bar button:active{transform:scale(.92)}
+#bar button:disabled{opacity:.35;pointer-events:none}
+#bar .ib{font-size:2.8vmin;padding:.4vmin 1.3vmin}
+#next{background:linear-gradient(135deg,var(--p2),var(--pd))!important;color:#fff!important}
+#counter{font-size:2.1vmin;font-weight:800;color:var(--muted);min-width:9vmin;text-align:center;direction:ltr}
+#counter b{color:var(--pd)}
+#bar .sep{width:1px;height:3.4vmin;background:#E4DCFB}
+#clapBtn.pulse{animation:pop .4s}
+#hint{position:fixed;top:1.8vmin;left:1.8vmin;z-index:50;display:flex;gap:1.2vmin;font-size:1.55vmin;font-weight:700;color:#6B5A8E;
+  background:rgba(255,255,255,.85);border-radius:999px;padding:.6vmin 1.6vmin;transition:opacity .4s}
+#hint kbd{font-family:inherit;background:var(--ps);color:var(--pd);border-radius:6px;padding:0 .6vmin;font-weight:900}
+#progress{position:fixed;top:0;left:0;right:0;height:.6vmin;z-index:50;background:rgba(255,255,255,.3)}
+#progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--p2));transition:width .6s cubic-bezier(.2,.8,.2,1);margin-right:auto;margin-left:0}
+body.idle #bar{opacity:0;transform:translate(-50%,150%);pointer-events:none}
+body.idle #hint{opacity:0}
+
+#score{position:fixed;top:50%;left:2vmin;transform:translate(-130%,-50%);z-index:60;width:40vmin;background:#fff;border-radius:3vmin;
+  box-shadow:0 20px 50px -15px rgba(60,20,120,.5);padding:2.2vmin;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+#score.open{transform:translate(0,-50%)}
+.sc-head{display:flex;justify-content:space-between;align-items:center;font-size:2.8vmin;font-weight:900;color:var(--pdd);margin-bottom:1.5vmin}
+.sc-head button{font-size:2.4vmin;color:var(--muted)}
+.sc-row{display:flex;align-items:center;gap:1vmin;padding:1vmin 1.2vmin;border-radius:1.6vmin;margin-bottom:.8vmin;background:var(--pss);border-right:.7vmin solid var(--c)}
+.sc-name{flex:1;font-size:2.2vmin;font-weight:800}
+.sc-pts{font-size:3vmin;font-weight:900;color:var(--c);min-width:5vmin;text-align:center}
+.sc-pts.bump{animation:pop .4s}
+.sc-row button{width:4.4vmin;height:4.4vmin;border-radius:50%;background:#fff;font-size:2.6vmin;font-weight:900;color:var(--pd);border:2px solid var(--line)}
+.sc-row button:hover{border-color:var(--p2)}
+.crown{font-size:2.4vmin;width:3vmin;text-align:center}
+
+#scReset{margin-top:1vmin;width:100%;font-size:1.9vmin;font-weight:800;color:var(--muted);padding:.8vmin;border-radius:1.4vmin;border:2px dashed var(--line)}
+
+/* ---------- تنافس المجموعات ---------- */
+#teams{position:fixed;top:1.4vmin;left:50%;transform:translateX(-50%);z-index:55;display:flex;gap:.7vmin;
+  background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:.6vmin .8vmin;border-radius:999px;box-shadow:0 8px 24px -12px rgba(60,20,120,.45)}
+.tm{display:flex;align-items:center;gap:.5vmin;background:var(--c);color:#fff;border-radius:999px;padding:.35vmin 1.1vmin .35vmin .8vmin;font-size:2vmin;font-weight:900;min-width:7vmin;justify-content:center;transition:transform .2s}
+.tm:hover{transform:translateY(-2px)}
+.tm .tm-ic{font-size:2.1vmin}
+.tm b{direction:ltr}
+.tm.lead{box-shadow:0 0 0 .35vmin #fff,0 0 0 .7vmin var(--c)}
+.tm.bump{animation:pop .5s}
+#award{position:fixed;left:50%;bottom:11vmin;transform:translate(-50%,40px) scale(.9);opacity:0;pointer-events:none;z-index:70;
+  background:#fff;border-radius:3vmin;padding:1.6vmin 2vmin;box-shadow:0 24px 60px -15px rgba(60,20,120,.55);border:2px solid var(--line);
+  transition:transform .4s cubic-bezier(.2,1.4,.5,1),opacity .3s}
+#award.open{transform:translate(-50%,0) scale(1);opacity:1;pointer-events:auto}
+.aw-head{display:flex;align-items:center;gap:1.2vmin;font-size:2.6vmin;font-weight:900;color:var(--pdd);margin-bottom:1.2vmin;justify-content:center}
+#awPts{background:var(--ok);color:#fff;border-radius:999px;padding:0 1.4vmin;direction:ltr}
+#awClose{margin-inline-start:auto;font-size:2.2vmin;color:var(--muted);padding:0 .6vmin}
+#awBtns{display:flex;gap:1vmin}
+#awBtns button{width:10vmin;display:flex;flex-direction:column;align-items:center;gap:.3vmin;padding:1vmin .4vmin;border-radius:2vmin;
+  background:var(--c);color:#fff;transition:transform .2s;box-shadow:0 8px 16px -8px var(--c)}
+#awBtns button:hover{transform:translateY(-5px) scale(1.05)}
+#awBtns span{font-size:4vmin;line-height:1.1}
+#awBtns small{font-size:1.8vmin;font-weight:900}
+
+.hero-teams{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:-16px 0 30px;font-size:24px}
+.hero-teams b{color:var(--pd);margin-left:6px}
+.hero-teams span{background:var(--c);color:#fff;border-radius:999px;padding:3px 16px;font-weight:800;font-size:22px}
+.grp8{gap:22px}
+.grp8 .fc-ic{font-size:64px}
+.grp8 .fc-title{font-size:32px}
+.grp8 .fc-front{gap:6px;padding:18px}
+.grp8 .fc-back{padding:22px}
+.grp8 .fc-back p{font-size:25px;line-height:1.55}
+
+.lb{display:flex;flex-direction:column;gap:12px;width:1500px;align-self:center}
+.lb-row{display:grid;grid-template-columns:70px 250px 1fr 90px;gap:20px;align-items:center;background:#fff;border-radius:22px;padding:8px 22px;box-shadow:var(--shadow-s);border-right:10px solid var(--c)}
+.lb-pos{font-size:34px;font-weight:900;color:var(--muted);text-align:center}
+.lb-name{font-size:32px;font-weight:900;color:var(--c)}
+.lb-track{height:34px;background:var(--pss);border-radius:999px;overflow:hidden}
+.lb-bar{height:100%;background:var(--c);border-radius:999px;transition:width 1.6s cubic-bezier(.2,.8,.2,1)}
+.lb-pts{font-size:38px;font-weight:900;text-align:center;direction:ltr}
+.lb-row.win{transform:scale(1.03);box-shadow:0 0 0 5px var(--c),var(--shadow)}
+.lb-row.win .lb-pos{font-size:44px}
+
+/* طبقة المؤثرات */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:80}
+.clap-fly{position:fixed;bottom:9vh;pointer-events:none;z-index:81;animation:clapUp 2.2s ease-out forwards}
+@keyframes clapUp{0%{transform:translate(0,0) scale(.4) rotate(0);opacity:0}12%{opacity:1;transform:translate(0,-6vh) scale(1.1)}
+  100%{transform:translate(var(--dx),-75vh) scale(.9) rotate(var(--rot));opacity:0}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="brand" id="brand"></div>
+  <div class="pgnum" id="pgnum"></div>
+</div>
+
+<!-- شريط التحكم -->
+<nav id="bar" dir="ltr">
+  <button id="prev" title="السابق (←)">← السابق</button>
+  <div id="counter"><b>1</b> / 1</div>
+  <button id="next" title="التالي (→ أو Space)">التالي →</button>
+  <span class="sep"></span>
+  <button id="clapBtn" class="ib" title="تصفيق (ت)">👏</button>
+  <button id="scoreBtn" class="ib" title="نقاط المجموعات">🏆</button>
+  <button id="fsBtn" class="ib" title="ملء الشاشة">⛶</button>
+</nav>
+<div id="hint"><span><kbd>Space</kbd> = التالي</span>|<span><kbd>← →</kbd> للتنقل</span>|<span><kbd>ت</kbd> = تصفيق</span></div>
+<div id="progress"><i></i></div>
+
+<!-- لوحة نقاط المجموعات -->
+<aside id="score">
+  <div class="sc-head">🏆 نقاط المجموعات <button id="scClose">✕</button></div>
+  <div id="scList"></div>
+  <button id="scReset">↺ تصفير النقاط</button>
+</aside>
+
+<!-- شريط نقاط المجموعات الدائم أعلى الشاشة -->
+<div id="teams"></div>
+
+<!-- نافذة منح النقاط -->
+<div id="award">
+  <div class="aw-head">🏅 أي مجموعة أجابت؟ <span id="awPts">+1</span><button id="awClose" title="إغلاق">✕</button></div>
+  <div id="awBtns"></div>
+</div>
+
+<canvas id="fx"></canvas>
+
+<script>
+/* ==========================================================================
+   ⭐⭐ الجزء الأول: إعدادات الدرس — عدّلي المحتوى من هنا فقط ⭐⭐
+   --------------------------------------------------------------------------
+   • LESSON : بيانات الدرس العامة.
+   • SLIDES : قائمة الشرائح بالترتيب. لإضافة شريحة انسخي أي شريحة والصقيها،
+              ولحذف شريحة احذفي القوس { ... } الخاص بها. عدد الشرائح يُحسب تلقائيًا.
+   • أنواع الشرائح (type):
+       title, mcq, objectives, brainstorm, blanks, cards, order, footprints,
+       sort, reveal, terminal, tps, compare, match, tf, groups, challenge,
+       review, leaderboard, closing
+   • نظام التنافس: بعد كل إجابة صحيحة تظهر نافذة «أي مجموعة أجابت؟»
+     لتضغطي على لون المجموعة فتُضاف لها النقاط. ويمكن تعديل النقاط يدويًا من زر 🏆
+   • في الأسئلة: answer = رقم الإجابة الصحيحة بدءًا من 0 (الخيار الأول = 0).
+   • يمكنك استخدام <b>نص</b> لجعل الكلمة عريضة.
+   ========================================================================== */
+
+const LESSON = {
+  title:    'الأمن السيبراني',
+  lessonNo: 'الدرس الثالث',
+  subject:  'التقنية الرقمية',
+  teacher:  'أ. أميرة البلوي',
+  school:   'الثانوية الثانية عشر بتبوك',
+  // 🏆 المجموعات الثماني المتنافسة (الاسم + الرمز + اللون)
+  teams: [
+    { name:'الدرع',   icon:'🛡️', color:'#7C3AED' },  // بنفسجي
+    { name:'المفتاح', icon:'🔑', color:'#EC4899' },  // وردي
+    { name:'الشيفرة', icon:'💻', color:'#14B8A6' },  // فيروزي
+    { name:'الرادار', icon:'📡', color:'#F97316' },  // برتقالي
+    { name:'القفل',   icon:'🔒', color:'#3B82F6' },  // أزرق
+    { name:'البوصلة', icon:'🧭', color:'#22C55E' },  // أخضر
+    { name:'الصقر',   icon:'🦅', color:'#EAB308' },  // أصفر
+    { name:'النجمة',  icon:'⭐', color:'#EF4444' }   // أحمر
+  ],
+  defaultPoints: 1   // النقاط الافتراضية لكل إجابة صحيحة (ويمكن وضع points:2 داخل أي شريحة)
+};
+
+// رسائل التغذية الراجعة
+const MSG = {
+  correct: 'أحسنتِ! 👏 إجابة صحيحة',
+  wrong:   'حاولي مرة أخرى 💜',
+  short:   'أحسنتِ! 👏',
+  allDone: 'ممتاز! أنجزتِ التحدي كاملًا 🎉'
+};
+
+const SLIDES = [
+
+  /* 1) الشريحة الترحيبية */
+  { type:'title', anim:'zoom',
+    subtitle:'مهمتكِ اليوم: أن تفكّري كـ <b>محللة أمن سيبراني</b> 🕵️‍♀️ تحمي البيانات وتكشف التهديدات' },
+
+  /* مراجعة الدرس السابق: دورة حياة النظام وإنشاء المخططات (الكتاب ص 55–73) */
+  { type:'recap', tag:'🔁 مراجعة الدرس السابق', title:'دورة حياة النظام… هل تتذكرين؟', anim:'fade',
+    questions:[
+      { kind:'✔️✖️ صح أم خطأ', q:'«تنحصر عملية تطوير البرمجيات في مرحلة الصيانة».',
+        a:'خطأ ✖ — تمر بجميع مراحل دورة حياة النظام: التحليل، التصميم، التطوير والاختبار، التنفيذ، الصيانة.' },
+      { kind:'❓ اختاري', q:'المرحلة التي تُستخدم فيها أدوات جمع البيانات (الاستبانات والمقابلات) هي مرحلة…',
+        a:'التحليل 📝 — لتحديد المستخدِمين واحتياجاتهم ومتطلباتهم.' },
+      { kind:'🧠 فكّري', q:'ما المرحلتان المستمرتان طوال دورة حياة النظام؟',
+        a:'التوثيق والتقييم 🔄 — تبدآن مع التخطيط وتستمران حتى الصيانة.' },
+      { kind:'🗂️ صنّفي', q:'«قدرة النظام على استرجاع البيانات غير المحفوظة عند انقطاع الطاقة» متطلب وظيفي أم غير وظيفي؟',
+        a:'غير وظيفي ⚙️ — يصف جودة النظام (الموثوقية)، لا ما يقوم به.' },
+      { kind:'🔍 اذكري', q:'طريقتين لجمع متطلبات النظام، مع ميزة لكل منهما.',
+        a:'الاستبانات (وقت أقل) • المقابلات (تفسير فوري للأسئلة) • الملاحظة (تفاصيل دقيقة) • فحص توثيقات النظام (توفير الوقت).' },
+      { kind:'🔷 مخطط سير العمل', q:'ماذا يمثّل شكل المعيّن ◇ وشكل المستطيل ▭ في مُخطط سير العمل؟',
+        a:'المعيّن: اتخاذ قرار • المستطيل: عملية أو وظيفة.' }
+    ] },
+
+  /* 2) تمهيد بموقف واقعي — ماذا تتوقعين؟ */
+  { type:'mcq', tag:'🔮 تمهيد: ماذا ستفعلين؟', title:'موقف حقيقي… يحدث كل يوم',
+    scene:`<div class="phone"><div class="sms-head">📩 رسالة جديدة • رقم غير معروف</div>
+            <div class="sms">🎉 مبروك! تم اختيار رقمك للفوز بجائزة <b>5000 ريال</b> 🎁<br>لاستلامها أدخلي بيانات بطاقتك البنكية خلال <b>10 دقائق</b> فقط ⏳
+            <span class="link">http://win-gift2026.xyz/claim</span><div class="sms-time">08:14 ص</div></div></div>`,
+    question:'وصلتكِ هذه الرسالة… ما التصرف الأذكى؟',
+    options:[
+      { icon:'👆', t:'أضغط الرابط بسرعة قبل انتهاء الوقت' },
+      { icon:'📤', t:'أرسلها لصديقاتي ليستفدن' },
+      { icon:'🛡️', t:'أتجاهلها وأحذفها وأبلّغ عنها' },
+      { icon:'💬', t:'أرد وأسأل: من أنت؟' }
+    ],
+    answer:2,
+    explain:'هذا <b>احتيال إلكتروني</b> 🎣 يعتمد على الاستعجال والإغراء. درس اليوم سيعلّمكِ كيف تحمين نفسكِ وأنظمتكِ.' },
+
+  /* 3) أهداف الدرس */
+  { type:'objectives', tag:'🎯 أهداف الدرس', title:'بنهاية هذه المهمة ستكونين قادرة على:',
+    goals:[
+      { icon:'🔄', t:'توضيح كيفية دمج الأمن السيبراني في مراحل دورة حياة النظام' },
+      { icon:'👣', t:'تصنيف البصمة الرقمية إلى نشطة وغير نشطة' },
+      { icon:'🧱', t:'التمييز بين وظيفة جدار الحماية ووظيفة مكافحة الفيروسات' }
+    ],
+    hint:'اضغطي على الهدف عند تحقّقه في نهاية الدرس ✓' },
+
+  /* 4) العصف الذهني */
+  { type:'brainstorm', tag:'🧠 العصف الذهني', title:'ماذا تعرفين مسبقًا؟',
+    prompt:'ما الكلمات التي تخطر ببالكِ عند سماع «الأمن السيبراني»؟ 💭',
+    center:'الأمن<br>السيبراني',
+    seconds:120,
+    suggestions:['حماية البيانات','كلمات المرور','الاختراق','الفيروسات','الخصوصية','جدار الحماية','الاحتيال','التشفير','التحديثات','الهاكرز'] },
+
+  /* 5) أكملي الفراغ — تعريف الهيئة */
+  { type:'blanks', tag:'🧩 خمّني الكلمة المفقودة', title:'ما هو الأمن السيبراني؟',
+    source:'تعريف الهيئة الوطنية للأمن السيبراني (NCA):',
+    text:'هو حماية [الشبكات] وأنظمة تقنية المعلومات والأنظمة التشغيلية ومكوناتها من [أجهزة] و[برمجيات]، وما تقدمه من خدمات وما تحتويه من [بيانات]، من أي [اختراق] أو تعطيل أو تعديل أو دخول أو استخدام أو استغلال غير مشروع.',
+    note:'<span class="ni">🏛️</span><div><b>الهيئة الوطنية للأمن السيبراني</b> تأسست بأمر ملكي، وهي الجهة المختصة والمرجع الوطني في شؤون الأمن السيبراني بالمملكة.</div>' },
+
+  /* 6) ماذا تتوقعين؟ */
+  { type:'mcq', tag:'🔮 ماذا تتوقعين؟', title:'المملكة على خريطة الأمن السيبراني العالمية', anim:'fade',
+    scene:`<div class="scene-card"><div class="sc-big">🏆</div><div class="sc-t">المؤشر العالمي<br>للأمن السيبراني</div><div class="sc-s">Global Cybersecurity Index – GCI</div></div>`,
+    question:'برأيكِ… ما ترتيب المملكة العربية السعودية في هذا المؤشر (الكتاب السنوي للتنافسية العالمية 2026)؟',
+    options:[
+      { icon:'🏅', t:'المركز الخامس' },
+      { icon:'🏅', t:'المركز العاشر' },
+      { icon:'🏅', t:'المركز الأول' },
+      { icon:'🏅', t:'المركز العشرون' }
+    ],
+    answer:2,
+    explain:'حافظت المملكة على <b>المركز الأول عالميًا</b> 🥇، وصُنّفت ضمن الفئة الأولى <b>«النموذج المحتذى به»</b> في مؤشر الاتحاد الدولي للاتصالات (ITU).' },
+
+  /* 7) بطاقات: مبادرات المملكة */
+  { type:'cards', tag:'🃏 بطاقات الاكتشاف', title:'كيف وصلت المملكة للصدارة؟',
+    subtitle:'كل مجموعة تختار بطاقة، تقرؤها، ثم تشرحها للفصل بجملة واحدة 🎤',
+    cards:[
+      { icon:'🎓', title:'التعليم والتدريب', color:'#7C3AED',
+        text:'برامج الأكاديمية الوطنية، معسكرات الاتحاد السعودي للأمن السيبراني والبرمجة والدرونز (SAFCSP)، وإطار «سايبر-التعليم».' },
+      { icon:'🧭', title:'الاستراتيجية الوطنية', color:'#EC4899',
+        text:'خطط لتطوير القدرات الوطنية، وحماية البنية التحتية الحيوية، وتعزيز التعاون الدولي.' },
+      { icon:'🤝', title:'الشراكات الصناعية', color:'#14B8A6',
+        text:'شراكات مع شركات القطاع الخاص والشركات الدولية لتوفير برامج التدريب والتطوير.' },
+      { icon:'🚀', title:'تطوير القطاع', color:'#F59E0B',
+        text:'البرنامج الوطني «سايبرك» (CyberIC)، و«التمارين الوطنية السيبرانية»، ومبادرات لفئات المجتمع.' }
+    ] },
+
+  /* 8) لعبة الترتيب: دورة حياة النظام */
+  { type:'order', tag:'🧗 تحدي الترتيب', title:'دمج الأمن في دورة حياة النظام',
+    prompt:'رتّبي مراحل دورة حياة النظام بالضغط عليها بالترتيب الصحيح 👇',
+    items:[
+      { icon:'📝', t:'التحليل',     en:'Analysis',       info:'<b>التحليل:</b> تحديد متطلبات الأمن السيبراني وتوثيقها منذ البداية.' },
+      { icon:'🎨', t:'التصميم',     en:'Design',         info:'<b>التصميم:</b> دمج ضوابط الأمن في التصميم ليكون النظام مرنًا أمام الهجمات.' },
+      { icon:'💻', t:'التطوير',     en:'Development',    info:'<b>التطوير:</b> اتباع معايير التشفير الآمن ومراجعة الشيفرة البرمجية لإصلاح الثغرات.' },
+      { icon:'🧪', t:'الاختبارات',  en:'Testing',        info:'<b>الاختبارات:</b> اختبار الاختراق ومسح الثغرات لاكتشاف ما فات أثناء التطوير.' },
+      { icon:'🚀', t:'التنفيذ',     en:'Implementation', info:'<b>التنفيذ:</b> تفعيل الضوابط الأمنية للتأكد من أن النظام آمن عند نشره.' },
+      { icon:'🔧', t:'الصيانة',     en:'Maintenance',    info:'<b>الصيانة:</b> تقييمات أمنية منتظمة وتحديث ضوابط الأمان حسب الحاجة.' }
+    ] },
+
+  /* 9) سؤال اختيار من متعدد */
+  { type:'mcq', tag:'❓ استراتيجية الأسئلة', title:'سؤال سريع', anim:'fade',
+    question:'في أي مرحلة يُجرى «اختبار الاختراق» ومسح الثغرات الأمنية؟',
+    options:[
+      { icon:'📝', t:'التحليل' },
+      { icon:'🎨', t:'التصميم' },
+      { icon:'🧪', t:'الاختبارات' },
+      { icon:'🔧', t:'الصيانة' }
+    ],
+    answer:2,
+    explain:'في مرحلة <b>الاختبارات</b> نحاول «مهاجمة» النظام بطريقة مشروعة لنكتشف الثغرات قبل المخترقين.' },
+
+  /* 10) لاحظي واكتشفي: البصمة الرقمية */
+  { type:'footprints', tag:'🔍 لاحظي واكتشفي', title:'ماذا تتركين خلفكِ على الإنترنت؟',
+    prompt:'اختاري ما فعلتِه خلال الأسبوع الماضي، وراقبي ماذا يحدث 👀',
+    actions:[
+      { icon:'🔎', t:'بحثتُ في قوقل' },
+      { icon:'❤️', t:'أعجبني مقطع' },
+      { icon:'📍', t:'فتحتُ الخرائط' },
+      { icon:'🛒', t:'اشتريتُ أونلاين' },
+      { icon:'💬', t:'علّقتُ على منشور' },
+      { icon:'📝', t:'سجّلتُ في موقع' },
+      { icon:'📸', t:'نشرتُ صورة' },
+      { icon:'🎮', t:'لعبتُ لعبة أونلاين' }
+    ],
+    reveal:'هذه هي <b>البصمة الرقمية (Digital Footprint)</b>: أثر تتركينه عند كل عمل أو تصفح عبر الإنترنت، وقد يتمكن الآخرون من رؤيته وتحليله.' },
+
+  /* 11) تصنيف: نشطة أم غير نشطة */
+  { type:'sort', tag:'🗂️ صنّفي', title:'البصمة الرقمية: نشطة أم غير نشطة؟',
+    prompt:'هل تُركت هذه البصمة <b>بإرادتكِ</b> أم <b>دون قصد</b>؟ اضغطي على العمود المناسب',
+    buckets:[
+      { key:'a', label:'بصمة نشطة',     icon:'🙋‍♀️', color:'#7C3AED' },
+      { key:'p', label:'بصمة غير نشطة', icon:'🕶️', color:'#EC4899' }
+    ],
+    items:[
+      { icon:'📸', t:'نشرتِ صورة على إنستقرام', b:'a' },
+      { icon:'📍', t:'تطبيق يحدد موقعكِ الجغرافي', b:'p' },
+      { icon:'📝', t:'عبّأتِ نموذج اشتراك في نشرة بريدية', b:'a' },
+      { icon:'🍪', t:'موقع يثبّت ملفات تعريف الارتباط (Cookies)', b:'p' },
+      { icon:'💼', t:'أنشأتِ ملفًا شخصيًا على LinkedIn', b:'a' },
+      { icon:'🎯', t:'إعلانات تظهر لكِ حسب إعجاباتك', b:'p' },
+      { icon:'💬', t:'كتبتِ تعليقًا على مقطع يوتيوب', b:'a' },
+      { icon:'🔎', t:'موقع يسجّل عمليات بحثك', b:'p' }
+    ] },
+
+  /* 12) بطاقات: تأثير البصمة على دورة حياة النظام */
+  { type:'cards', tag:'🃏 بطاقات الاكتشاف', title:'كيف تؤثر البصمة الرقمية على الأنظمة والمؤسسات؟',
+    subtitle:'قبل قلب البطاقة: توقّعي ماذا تعني كل كلمة 🤔',
+    cards:[
+      { icon:'🚨', title:'الأخطار الأمنية', color:'#F43F5E',
+        text:'موظف يشارك معلومات حساسة دون قصد، فيستغلها مجرمو الإنترنت لشنّ هجوم على المنظمة.' },
+      { icon:'⭐', title:'إدارة السمعة', color:'#F59E0B',
+        text:'التعليقات والمراجعات السلبية تؤثر على سمعة المؤسسة ومبيعاتها وثقة العملاء.' },
+      { icon:'⚖️', title:'التوافق', color:'#14B8A6',
+        text:'يجب الالتزام بقوانين خصوصية البيانات لتجنّب التجاوزات والغرامات والعقوبات.' },
+      { icon:'📡', title:'المراقبة', color:'#7C3AED',
+        text:'مراقبة البصمة الرقمية بانتظام عبر وسائل التواصل والمنصات لاكتشاف الأخطار مبكرًا.' }
+    ] },
+
+  /* 13) كشف تدريجي: آثار التعقب الرقمية */
+  { type:'reveal', tag:'👀 اكشفي', title:'آثار التعقب الرقمية (Digital Traces)', h:330,
+    qIcon:'🧐', question:'كل نشاط لكِ يترك «آثارًا» تكوّن بصمتك… تنقسم إلى نوعين، ما هما؟',
+    items:[
+      { icon:'✍️', t:'آثار مقصودة ومرئية', d:'رسائل البريد، النصوص، المنشورات، الصور، التعليقات على يوتيوب، الإعجابات على فيسبوك.' },
+      { icon:'🕶️', t:'آثار غير مقصودة وغير مرئية', d:'سجلات زيارات المواقع، عمليات البحث، سجلات تحركاتك على الإنترنت وتواصلك مع الآخرين.' }
+    ] },
+
+  /* ربط بالقيم الإسلامية: آثارنا الرقمية */
+  { type:'cards', tag:'🕌 قيمنا الإسلامية', title:'آثاري الرقمية… في ميزاني',
+    subtitle:'اقلبي البطاقة، ثم اربطي النص الشرعي بالبصمة الرقمية بجملة واحدة 💭',
+    cards:[
+      { icon:'📜', title:'آثارنا مكتوبة', color:'#7C3AED',
+        text:'<span class="ayah">﴿وَنَكْتُبُ مَا قَدَّمُوا وَآثَارَهُمْ﴾</span><span class="ref">[يس: 12]</span>كما تُكتب آثارنا عند الله، تبقى آثارنا الرقمية مسجّلة… فلنترك أثرًا طيبًا.' },
+      { icon:'✍️', title:'كل كلمة محفوظة', color:'#EC4899',
+        text:'<span class="ayah">﴿مَّا يَلْفِظُ مِن قَوْلٍ إِلَّا لَدَيْهِ رَقِيبٌ عَتِيدٌ﴾</span><span class="ref">[ق: 18]</span>كل منشور وتعليق «قول» يُكتب… فراقبي الله قبل أن تكتبي.' },
+      { icon:'🕵️‍♀️', title:'خصوصية الآخرين أمانة', color:'#14B8A6',
+        text:'<span class="ayah">﴿وَلَا تَجَسَّسُوا﴾</span><span class="ref">[الحجرات: 12]</span>لا نتتبّع بيانات الآخرين، ولا ننشر صورهم وأسرارهم دون إذنهم.' },
+      { icon:'💬', title:'قولي خيرًا أو اصمتي', color:'#F59E0B',
+        text:'<span class="ayah">«مَن كانَ يُؤْمِنُ باللَّهِ واليَومِ الآخِرِ فَلْيَقُلْ خَيْرًا أوْ لِيَصْمُتْ»</span><span class="ref">[متفق عليه]</span>قبل النشر اسألي نفسكِ: هل هذا خير؟' }
+    ] },
+
+  /* 14) محاكاة سجل الخادم */
+  { type:'terminal', tag:'🔍 لاحظي واكتشفي', title:'ماذا يسجّل الخادم عنكِ في ثانية واحدة؟',
+    url:'https://www.cyber-school.sa/lesson',
+    pageText:'اضغطي لزيارة الموقع وراقبي الشاشة السوداء 👉',
+    lines:[
+      { k:'عنوان IP',        v:'185.23.41.7' },
+      { k:'هوية الحاسب',     v:'DESKTOP-STD07' },
+      { k:'معرّف الدخول',    v:'noura_2026' },
+      { k:'تاريخ ووقت الاتصال', v:'2026-09-27  08:15:42' },
+      { k:'طريقة الطلب',     v:'GET' },
+      { k:'الملف المطلوب',   v:'/lesson/cyber.html' },
+      { k:'حالة HTTP',       v:'200 OK ✓' },
+      { k:'حجم الملف',       v:'24 KB' }
+    ],
+    question:'ماذا نسمي هذا الملف؟ ومن يستطيع رؤيته؟',
+    answer:'هذه <b>سجلات الخادم (Server Logs)</b>: تُضاف إليها بيانات في كل زيارة، ولا يراها إلا <b>مالك الموقع</b>… وقد تُتتبَّع زياراتك بصمت دون علمك 🤫' },
+
+  /* 15) فكّري – زاوجي – شاركي */
+  { type:'tps', tag:'👭 فكّري – زاوجي – شاركي', title:'قضية للنقاش',
+    question:'📸 نشرت إحدى الطالبات صورة من نافذة غرفتها، والتطبيق يضيف موقعها تلقائيًا. ما المعلومات التي قد يعرفها الغرباء؟ ومن أين تجمع الشركات معلوماتنا؟',
+    phases:[
+      { icon:'🤔', name:'فكّري',  desc:'دوّني أفكاركِ بصمت',          sec:60,  color:'#7C3AED' },
+      { icon:'👭', name:'زاوجي',  desc:'ناقشي زميلتكِ واتفقا',        sec:90,  color:'#EC4899' },
+      { icon:'📢', name:'شاركي',  desc:'اعرضا أقوى فكرة على الفصل',   sec:120, color:'#14B8A6' }
+    ],
+    answers:['📍 الموقع الجغرافي (GPS)','🏠 الحي وشكل المنزل','⏰ أوقات التواجد','✍️ ما ندخله بأنفسنا: الاسم والبريد والجوال','📶 نقاط الواي فاي المحيطة','📰 مصادر عامة وشركاء التسويق'] },
+
+  /* 16) كشف: مخاطر تداول البيانات */
+  { type:'reveal', tag:'⚠️ ماذا يحدث لبياناتي؟', title:'مخاطر تداول البيانات الشخصية', h:300,
+    qIcon:'💭', question:'بياناتك تنتقل وتُخزَّن في أماكن كثيرة… ما الذي قد يترتب على ذلك؟',
+    items:[
+      { icon:'📶', t:'عبور شبكات قابلة للاختراق', d:'قد تُعترض البيانات أثناء انتقالها.' },
+      { icon:'🗄️', t:'قواعد بيانات قد تُسرق', d:'أو تُباع لجهات أخرى.' },
+      { icon:'📱', t:'الحفظ على الأجهزة', d:'الأقراص والهواتف قد يصل إليها آخرون.' },
+      { icon:'🏢', t:'إتاحتها لجهات متعددة', d:'باحثون، سلطات، محاكم، وشركات تسويق.' }
+    ] },
+
+  /* 17) مقارنة: جدار الحماية ومكافحة الفيروسات */
+  { type:'compare', tag:'⚖️ قارني', title:'جدار الحماية 🆚 مكافحة الفيروسات',
+    cols:[
+      { icon:'🧱', name:'جدار الحماية', color:'#7C3AED', analogy:'مثل حارس بوابة المدرسة 💂‍♀️' },
+      { icon:'🩺', name:'مكافحة الفيروسات', color:'#14B8A6', analogy:'مثل العيادة التي تفحص وتعالج 💊' }
+    ],
+    rows:[
+      { k:'الوظيفة',       a:'يراقب حركة مرور الشبكة ويتحكم فيها',   b:'يكتشف البرامج الضارة ويمنعها ويزيلها' },
+      { k:'الهدف',         a:'يمنع المتسللين والوصول غير المصرح به', b:'يحمي من الفيروسات والديدان وأحصنة طروادة' },
+      { k:'النوع',         a:'أجهزة أو برمجيات',                      b:'برمجيات دائمًا' },
+      { k:'المسح الضوئي',  a:'لا يفحص الملفات والبرامج',               b:'يفحص الملفات بحثًا عن توقيعات البرامج الضارة' },
+      { k:'التوافق',       a:'قد يتعارض مع برامج أمان أخرى',            b:'متوافق مع معظم برامج الأمان' }
+    ] },
+
+  /* 18) تصنيف: من المسؤول؟ */
+  { type:'sort', tag:'🕵️‍♀️ من المسؤول؟', title:'مَن يتصدّى لهذا التهديد؟',
+    prompt:'اقرئي الموقف، ثم حدّدي أداة الحماية المسؤولة عنه',
+    buckets:[
+      { key:'f', label:'جدار الحماية',     icon:'🧱', color:'#7C3AED' },
+      { key:'v', label:'مكافحة الفيروسات', icon:'🩺', color:'#14B8A6' }
+    ],
+    items:[
+      { icon:'👤', t:'جهاز غريب يحاول الدخول إلى حاسبك عبر الشبكة', b:'f' },
+      { icon:'💾', t:'فلاش ميموري يحتوي على ملف مصاب بفيروس', b:'v' },
+      { icon:'🚦', t:'مراقبة حركة مرور الشبكة حسب قواعد أمان محددة', b:'f' },
+      { icon:'🐴', t:'إزالة «حصان طروادة» من جهاز الحاسب', b:'v' },
+      { icon:'🚫', t:'منع المتسللين من الوصول إلى النظام', b:'f' },
+      { icon:'🔬', t:'فحص الملفات بحثًا عن سلوكيات البرامج الضارة', b:'v' }
+    ] },
+
+  /* 19) سؤال تحدٍّ مع كشف */
+  { type:'reveal', tag:'🤔 سؤال تحدٍّ', title:'هل جدار الحماية يحميني من كل شيء؟', h:300,
+    qIcon:'🧱', question:'جدار الحماية وحده لا يكفي! ما التهديدات التي لا يحمي منها؟',
+    items:[
+      { icon:'🎣', t:'الاحتيال الإلكتروني', d:'رسائل ومواقع تخدعك لتسليم بياناتك.' },
+      { icon:'📢', t:'الإعلانات المنبثقة', d:'نوافذ مزعجة قد تحمل روابط خطرة.' },
+      { icon:'📧', t:'البريد غير المرغوب فيه', d:'رسائل عشوائية مزعجة (Spam).' }
+    ] },
+
+  /* 20) سؤال */
+  { type:'mcq', tag:'❓ اختاري الإجابة الصحيحة', title:'موقف تقني', anim:'fade',
+    question:'ثبّتِ برنامج مكافحة فيروسات يحتوي على جدار حماية، فطلب منكِ تعطيل جدار حماية ويندوز. لماذا؟',
+    options:[
+      { icon:'🐢', t:'لأن جدار ويندوز بطيء' },
+      { icon:'⚔️', t:'لتجنّب التعارض بين برنامجي الأمان' },
+      { icon:'🗑️', t:'لأن جدار ويندوز لا يعمل' },
+      { icon:'💰', t:'لأن البرنامج الجديد مدفوع' }
+    ],
+    answer:1,
+    explain:'قد يتعارض جدار الحماية مع برامج أمان أخرى. ويحتوي ويندوز على جدار <b>Windows Defender</b> وبرنامج مكافحة فيروسات مجاني هو <b>مايكروسوفت ديفندر</b>.' },
+
+  /* 26) صح أم خطأ */
+  { type:'tf', tag:'✔️✖️ التقييم الفوري: صح أم خطأ؟', title:'قرّري… وبرّري!',
+    items:[
+      { t:'جدار الحماية يحميني من رسائل البريد غير المرغوب فيها.', a:false, why:'خطأ: لا يحمي من البريد المزعج ولا الاحتيال ولا الإعلانات المنبثقة.' },
+      { t:'البصمة الرقمية غير النشطة قد أتركها دون أن أعرف.', a:true, why:'صح: مثل تحديد الموقع وملفات تعريف الارتباط.' },
+      { t:'يكفي دمج الأمن السيبراني في مرحلة التصميم فقط.', a:false, why:'خطأ: يُدمج في جميع مراحل دورة حياة النظام.' },
+      { t:'سجلات الخادم يستطيع أي زائر للموقع رؤيتها.', a:false, why:'خطأ: لا يراها إلا مالك الموقع.' }
+    ] },
+
+  /* 27) التعلم التعاوني */
+  // المهام بنفس ترتيب المجموعات في LESSON.teams (المهمة الأولى للمجموعة الأولى… وهكذا)
+  { type:'groups', tag:'🤝 التعلم التعاوني', title:'غرفة العمليات السيبرانية', points:3,
+    prompt:'لكل مجموعة مهمة… اكشفي مهمتكِ ونفّذيها قبل انتهاء الوقت ⏱️ (حتى 3 نقاط)',
+    seconds:180,
+    tasks:[
+      'مثّلن مشهدًا قصيرًا (30 ثانية) يوضح الفرق بين جدار الحماية ومكافحة الفيروسات.',
+      'اكتبن 3 أمثلة لبصمة نشطة و3 لبصمة غير نشطة من يومكن.',
+      'اقترحن 3 إجراءات تقلّل بصمتكن الرقمية غير النشطة.',
+      'صمّمن منشورًا توعويًا قصيرًا يوضح كيف نكتشف رسالة احتيال.',
+      'رتّبن مراحل دورة حياة النظام مع إجراء أمني واحد لكل مرحلة.',
+      'اكتبن 4 معلومات يسجلها الخادم عنكِ عند زيارة موقع، ولماذا يهمكِ ذلك؟',
+      'لخّصن مبادرات المملكة الأربع في الأمن السيبراني بخريطة ذهنية صغيرة.',
+      'اذكرن 3 تهديدات لا يحمي منها جدار الحماية مع مثال واقعي لكل منها.'
+    ] },
+
+  /* 28) تحدي الدقيقة */
+  { type:'challenge', tag:'⚡ تحدي الدقيقة', title:'كم سؤالًا تجيبين في 60 ثانية؟',
+    seconds:60,
+    questions:[
+      { q:'اذكري مرحلتين من مراحل دورة حياة النظام', a:'التحليل، التصميم، التطوير، الاختبارات، التنفيذ، الصيانة' },
+      { q:'ما اختصار الهيئة الوطنية للأمن السيبراني؟', a:'NCA' },
+      { q:'إلى صنفين تنقسم البصمة الرقمية… ما هما؟', a:'نشطة وغير نشطة' },
+      { q:'مثال على بصمة رقمية غير نشطة؟', a:'تحديد الموقع / ملفات تعريف الارتباط' },
+      { q:'ما البرنامج المجاني لمكافحة الفيروسات في ويندوز؟', a:'مايكروسوفت ديفندر (Microsoft Defender)' },
+      { q:'اذكري تهديدًا لا يحمي منه جدار الحماية', a:'الاحتيال / الإعلانات المنبثقة / البريد المزعج' }
+    ] },
+
+  /* 29) مراجعة: خريطة الدرس */
+  { type:'review', tag:'🗺️ مراجعة', title:'خريطة الدرس',
+    center:{ icon:'🧠', t:'خريطة الأمن السيبراني', d:'اضغطي على أي فكرة لمراجعتها، واطلبي من زميلتكِ شرحها قبل الضغط!' },
+    nodes:[
+      { icon:'🔄', t:'دورة حياة النظام', color:'#7C3AED', d:'الأمن يُدمج في المراحل الست: التحليل، التصميم، التطوير، الاختبارات، التنفيذ، الصيانة.' },
+      { icon:'🏛️', t:'المملكة والأمن السيبراني', color:'#10B981', d:'الهيئة الوطنية NCA، المركز الأول عالميًا في GCI، ومبادرات مثل سايبرك والتمارين الوطنية.' },
+      { icon:'👣', t:'البصمة الرقمية', color:'#EC4899', d:'نشطة: بإرادتك (منشورات، نماذج). غير نشطة: دون قصد (الموقع، الكوكيز).' },
+      { icon:'🗂️', t:'سجلات الخادم', color:'#0EA5E9', d:'تسجّل IP ووقت الاتصال وطريقة الطلب والملف المطلوب… ولا يراها إلا مالك الموقع.' },
+      { icon:'🧱', t:'جدار الحماية والمكافحة', color:'#F59E0B', d:'الجدار يراقب الشبكة ويمنع المتسللين، والمكافحة تفحص الملفات وتزيل البرامج الضارة.' }
+    ] },
+
+  /* 30) لوحة الصدارة وإعلان الفائز */
+  { type:'leaderboard', tag:'🏆 لحظة الحسم', title:'لوحة الصدارة', anim:'zoom' },
+
+  /* 31) الختام */
+  { type:'closing', anim:'zoom',
+    title:'أنتِ خط الدفاع الأول 🛡️',
+    message:'الأمن السيبراني ليس مهمة المختصين فقط… بل عادة يومية لكل واحدة منا',
+    tips:['🔑 كلمة مرور قوية لكل حساب','🤔 فكّري قبل أن تنشري','🔄 حدّثي برامج الحماية','🚫 لا تضغطي روابط مجهولة','🧱 فعّلي جدار الحماية'],
+    rating:[
+      { e:'😎', m:'رائعة! أنتِ جاهزة لتكوني محللة أمن سيبراني 🛡️' },
+      { e:'🙂', m:'جميل! راجعي خريطة الدرس لتثبيت المعلومات 💜' },
+      { e:'🤔', m:'لا بأس أبدًا! دوّني سؤالكِ وسنراجعه معًا 🌱' }
+    ] }
+];
+
+/* ==========================================================================
+   ⚙️ الجزء الثاني: محرك العرض — لا تحتاجين لتعديل ما بعد هذا السطر
+   ========================================================================== */
+
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const PALETTE = ['#7C3AED','#EC4899','#14B8A6','#F59E0B','#0EA5E9','#8B5CF6','#10B981','#F43F5E'];
+const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const retrigger = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+const shake = el => retrigger(el,'shake');
+function setFb(fb, ok, text){ if(!fb) return; fb.innerHTML = text || (ok?MSG.correct:MSG.wrong); fb.className='feedback '+(ok?'ok':'bad'); retrigger(fb,'pop'); }
+
+/* ---------------- 🔊 الأصوات (Web Audio API — بدون ملفات خارجية) ---------------- */
+const sound = (() => {
+  let ctx, master, noiseBuf;
+  function ac(){
+    if(!ctx){
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createDynamicsCompressor(); master.connect(ctx.destination);
+    }
+    if(ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, t, dur, type='sine', vol=.18, toFreq){
+    const c=ac(), o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,t);
+    if(toFreq) o.frequency.exponentialRampToValueAtTime(toFreq,t+dur);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.015); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g).connect(master); o.start(t); o.stop(t+dur+.05);
+  }
+  function noise(){
+    const c=ac();
+    if(!noiseBuf){ noiseBuf=c.createBuffer(1,c.sampleRate*.25,c.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }
+    return noiseBuf;
+  }
+  // صفقة واحدة: ضجيج قصير مُرشَّح
+  function clapOne(t, vol){
+    const c=ac(), src=c.createBufferSource(); src.buffer=noise();
+    const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=900+Math.random()*1500; bp.Q.value=.8;
+    const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=400;
+    const g=c.createGain();
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.003);
+    g.gain.exponentialRampToValueAtTime(.0001,t+.07+Math.random()*.06);
+    src.connect(hp).connect(bp).connect(g).connect(master); src.start(t, Math.random()*.1); src.stop(t+.2);
+  }
+  return {
+    ac,
+    // 👏 تصفيق جماعي قصير (~1.8 ثانية)
+    clap(){
+      const c=ac(), now=c.currentTime+.02;
+      for(let p=0;p<7;p++){
+        let t=now+Math.random()*.18; const period=.15+Math.random()*.09;
+        while(t<now+1.8){ const fade=Math.max(.1,1-(t-now)/2); clapOne(t,.9*fade*(.55+Math.random()*.45)); t+=period*(.85+Math.random()*.3); }
+      }
+    },
+    success(){ const t=ac().currentTime; [523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,t+i*.09,.35,'triangle',.2)); tone(2093,t+.38,.5,'sine',.07); },
+    wrong(){ const t=ac().currentTime; tone(392,t,.2,'sine',.13); tone(311,t+.16,.32,'sine',.13); },
+    ding(){ const t=ac().currentTime; tone(880,t,.25,'sine',.16); tone(1320,t+.06,.3,'sine',.1); },
+    pop(){ const t=ac().currentTime; tone(420,t,.12,'sine',.18,980); },
+    flip(){ const t=ac().currentTime; tone(700,t,.14,'triangle',.08,320); },
+    tick(){ const t=ac().currentTime; tone(1200,t,.04,'square',.04); },
+    bell(){ const t=ac().currentTime; [0,.45,.9].forEach(d=>{ tone(988,t+d,.9,'sine',.2); tone(1480,t+d,.6,'sine',.08); }); }
+  };
+})();
+
+/* ---------------- 🎉 قصاصات احتفالية (Canvas) ---------------- */
+const confetti = (() => {
+  const cv=$('#fx'), cx=cv.getContext('2d'); let parts=[], running=false, dpr=1;
+  const size=()=>{ dpr=window.devicePixelRatio||1; cv.width=innerWidth*dpr; cv.height=innerHeight*dpr; };
+  size(); addEventListener('resize',size);
+  const colors=['#7C3AED','#A78BFA','#EC4899','#F9A8D4','#14B8A6','#FBBF24','#38BDF8'];
+  function add(x,y,vx,vy){ parts.push({x,y,vx,vy,s:7+Math.random()*9,r:Math.random()*6,vr:(Math.random()-.5)*.35,c:colors[Math.random()*colors.length|0],life:0,max:110+Math.random()*70,circle:Math.random()<.3}); }
+  function loop(){
+    running=true; cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,innerWidth,innerHeight);
+    parts=parts.filter(p=>p.life<p.max && p.y<innerHeight+40);
+    for(const p of parts){
+      p.life++; p.vy+=.32; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      cx.save(); cx.globalAlpha=Math.min(1,(p.max-p.life)/30); cx.translate(p.x,p.y); cx.rotate(p.r); cx.fillStyle=p.c;
+      if(p.circle){ cx.beginPath(); cx.arc(0,0,p.s/2,0,7); cx.fill(); } else cx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);
+      cx.restore();
+    }
+    if(parts.length) requestAnimationFrame(loop); else { running=false; cx.clearRect(0,0,innerWidth,innerHeight); }
+  }
+  return {
+    burst(x,y,n=90){ for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, v=4+Math.random()*11; add(x,y,Math.cos(a)*v,Math.sin(a)*v-6); } if(!running) loop(); },
+    rain(n=160){ for(let i=0;i<n;i++) add(Math.random()*innerWidth,-20-Math.random()*300,(Math.random()-.5)*4,Math.random()*3); if(!running) loop(); }
+  };
+})();
+// احتفال + فتح نافذة «أي مجموعة أجابت؟» لمنح النقاط
+function celebrate(el, noAward){
+  sound.success();
+  const r=(el||$('#stage')).getBoundingClientRect();
+  confetti.burst(r.left+r.width/2, r.top+r.height/2, 100);
+  if(!noAward) showAward();
+}
+
+/* ---------------- 👏 التصفيق ---------------- */
+function clap(){
+  sound.clap();
+  const btn=$('#clapBtn'); retrigger(btn,'pulse');
+  for(let i=0;i<16;i++){
+    const s=document.createElement('span'); s.className='clap-fly'; s.textContent='👏';
+    s.style.left=(8+Math.random()*84)+'vw';
+    s.style.fontSize=(3+Math.random()*4)+'vmin';
+    s.style.setProperty('--dx',((Math.random()-.5)*30)+'vmin');
+    s.style.setProperty('--rot',((Math.random()-.5)*60)+'deg');
+    s.style.animationDelay=(i*70)+'ms';
+    document.body.appendChild(s); setTimeout(()=>s.remove(),3400);
+  }
+}
+
+/* ---------------- ⏱️ المؤقت ---------------- */
+class Countdown{
+  constructor(sec,onTick,onEnd){ this.total=sec; this.left=sec; this.onTick=onTick; this.onEnd=onEnd; this.id=null; }
+  get running(){ return !!this.id; }
+  start(){ if(this.id||this.left<=0) return; this.id=setInterval(()=>{ this.left--; this.onTick(this.left); if(this.left<=0){ this.stop(); this.onEnd&&this.onEnd(); } },1000); }
+  stop(){ clearInterval(this.id); this.id=null; }
+  reset(){ this.stop(); this.left=this.total; this.onTick(this.left); }
+}
+function mountTimer(slot, sec, opts={}){
+  const C=2*Math.PI*52;
+  slot.innerHTML=`<div class="timer-box ${opts.big?'big':''}"><div class="timer"><svg viewBox="0 0 120 120"><circle class="tr-bg" cx="60" cy="60" r="52"/><circle class="tr-fg" cx="60" cy="60" r="52"/></svg><div class="tr-txt">${fmt(sec)}</div></div>
+    <div class="tr-btns"><button class="tbtn t-play" title="تشغيل/إيقاف">▶</button><button class="tbtn t-reset" title="إعادة">↺</button></div></div>`;
+  const box=$('.timer-box',slot), fg=$('.tr-fg',slot), txt=$('.tr-txt',slot), play=$('.t-play',slot);
+  fg.style.strokeDasharray=C; fg.style.strokeDashoffset=0;
+  const draw=l=>{ txt.textContent=fmt(l); fg.style.strokeDashoffset=C*(1-l/sec); box.classList.toggle('warn',l<=10&&l>0); };
+  const cd=new Countdown(sec, l=>{ draw(l); if(l<=5&&l>0) sound.tick(); },
+    ()=>{ box.classList.add('end'); play.textContent='▶'; sound.bell(); opts.onEnd&&opts.onEnd(); });
+  play.onclick=()=>{
+    sound.ac();
+    if(cd.running){ cd.stop(); play.textContent='▶'; }
+    else { if(cd.left<=0){ cd.reset(); box.classList.remove('end'); } cd.start(); play.textContent='⏸'; opts.onStart&&opts.onStart(); }
+  };
+  $('.t-reset',slot).onclick=()=>{ cd.reset(); box.classList.remove('end','warn'); play.textContent='▶'; opts.onReset&&opts.onReset(); };
+  return cd;
+}
+
+/* ---------------- 🎨 قوالب الشرائح (Renderers) ---------------- */
+const R = {};
+
+/* الترحيب */
+R.title = {
+  html:s=>`<div class="hero">
+    <div>
+      <div class="rv"><span class="pill">${LESSON.lessonNo} • ${LESSON.subject}</span></div>
+      <h1 class="hero-title rv">${LESSON.title}</h1>
+      <p class="hero-sub rv">${s.subtitle}</p>
+      <div class="hero-meta rv"><span>👩‍🏫 ${LESSON.teacher}</span><span>🏫 ${LESSON.school}</span></div>
+      <div class="hero-teams rv"><b>⚔️ ${LESSON.teams.length} مجموعات تتنافس اليوم:</b>${LESSON.teams.map(t=>`<span style="--c:${t.color}">${t.icon} ${t.name}</span>`).join('')}</div>
+      <div class="rv"><button class="btn primary lg start-btn">🚀 لنبدأ المهمة</button></div>
+    </div>
+    <div class="hero-art rv">
+      <svg viewBox="0 0 400 400" aria-hidden="true">
+        <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#5B21B6"/></linearGradient></defs>
+        <circle class="orbit" cx="200" cy="200" r="186" fill="none" stroke="#C4B5FD" stroke-width="3" stroke-dasharray="6 14"/>
+        <circle class="orbit rev" cx="200" cy="200" r="152" fill="none" stroke="#F9A8D4" stroke-width="3" stroke-dasharray="2 12"/>
+        <path d="M200 70 L300 110 V200 C300 265 255 310 200 335 C145 310 100 265 100 200 V110 Z" fill="url(#sg)"/>
+        <path d="M200 88 L284 122 V200 C284 254 247 292 200 315 Z" fill="#fff" opacity=".13"/>
+        <path d="M178 186 V168 a22 22 0 0 1 44 0 V186" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+        <rect x="163" y="184" width="74" height="60" rx="13" fill="#fff"/>
+        <circle cx="200" cy="208" r="8" fill="#6D28D9"/><rect x="196" y="210" width="8" height="19" rx="4" fill="#6D28D9"/>
+      </svg>
+      <span class="float f1">🔒</span><span class="float f2">💻</span><span class="float f3">🔑</span><span class="float f4">📡</span>
+    </div></div>`,
+  init:sec=>{ $('.start-btn',sec).onclick=()=>next(); }
+};
+
+/* اختيار من متعدد */
+R.mcq = {
+  html:s=>`<div class="mcq">
+    ${s.scene?`<div class="scene rv">${s.scene}</div>`:''}
+    <div class="mcq-main">
+      <div class="q-card rv"><span class="q-ic">❓</span><p>${s.question}</p></div>
+      <div class="opts rv">${s.options.map((o,k)=>`<button class="opt" data-k="${k}"><span class="opt-ic">${o.icon||''}</span><span>${o.t}</span></button>`).join('')}</div>
+      <div class="feedback"></div>
+      ${s.explain?`<div class="explain">💡 ${s.explain}</div>`:''}
+    </div></div>`,
+  init:(sec,s)=>{
+    const fb=$('.feedback',sec), ex=$('.explain',sec); let done=false;
+    $$('.opt',sec).forEach(b=>b.onclick=()=>{
+      if(done) return;
+      if(+b.dataset.k===s.answer){
+        done=true; b.classList.add('correct'); $$('.opt',sec).forEach(o=>o!==b&&o.classList.add('dim'));
+        setFb(fb,true); ex&&ex.classList.add('show'); celebrate(b);
+      } else { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); setFb(fb,false); sound.wrong(); }
+    });
+  }
+};
+
+/* الأهداف */
+R.objectives = {
+  html:s=>`<div class="goals">${s.goals.map((g,k)=>`<div class="rv"><button class="goal"><span class="goal-n">${k+1}</span><span class="goal-ic">${g.icon}</span><span class="goal-t">${g.t}</span><span class="goal-check">✓</span></button></div>`).join('')}</div>
+    ${s.hint?`<p class="hint-sm rv">${s.hint}</p>`:''}`,
+  init:sec=>$$('.goal',sec).forEach(g=>g.onclick=()=>{ g.classList.toggle('done'); if(g.classList.contains('done')) sound.ding(); })
+};
+
+/* العصف الذهني */
+R.brainstorm = {
+  html:s=>`<div class="bs">
+    <div class="bs-side">
+      <div class="bs-prompt rv">${s.prompt}</div>
+      <div class="bs-input rv"><input type="text" placeholder="اكتبي فكرة الطالبة هنا…" maxlength="28"><button class="btn primary bs-add">＋</button></div>
+      <div class="bs-btns rv"><button class="btn ghost bs-sug">💡 فكرة مقترحة</button><button class="btn ghost bs-clear">🧹 مسح</button></div>
+      <div class="timer-slot rv"></div>
+    </div>
+    <div class="bs-area rv"><div class="bs-center">${s.center}</div></div></div>`,
+  init:(sec,s)=>{
+    const area=$('.bs-area',sec), inp=$('input',sec); let n=0, sug=0;
+    const add=t=>{
+      t=(t||'').trim(); if(!t) return;
+      // توزيع الأفكار في حلقتين حول المركز
+      const outer=n%18<10, k=outer? n%18 : n%18-10;
+      const ang=(outer? k*36 : k*45+22)*Math.PI/180 - Math.PI/2;
+      const rx=outer?39:25, ry=outer?40:28, jit=n>=18?4:0;
+      const b=document.createElement('div'); b.className='bubble'; b.textContent=t;
+      b.style.setProperty('--c',PALETTE[n%PALETTE.length]);
+      b.style.left=(50+Math.cos(ang)*rx+jit)+'%'; b.style.top=(50+Math.sin(ang)*ry+jit)+'%';
+      area.appendChild(b); n++; sound.pop();
+    };
+    $('.bs-add',sec).onclick=()=>{ add(inp.value); inp.value=''; inp.focus(); };
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ add(inp.value); inp.value=''; } });
+    $('.bs-sug',sec).onclick=e=>{ if(sug<s.suggestions.length) add(s.suggestions[sug++]); if(sug>=s.suggestions.length) e.currentTarget.disabled=true; };
+    $('.bs-clear',sec).onclick=()=>{ $$('.bubble',area).forEach(b=>b.remove()); n=0; sug=0; $('.bs-sug',sec).disabled=false; };
+    mountTimer($('.timer-slot',sec), s.seconds||120);
+  }
+};
+
+/* أكملي الفراغ */
+R.blanks = {
+  html:s=>`<div class="def-card rv"><div class="def-src">${s.source}</div>
+      <p class="def-text">${s.text.replace(/\[(.+?)\]/g,(_,w)=>`<button class="blank"><span>${w}</span></button>`)}</p></div>
+    <div class="center-row rv"><button class="btn ghost bl-all">👀 إظهار الكل</button></div>
+    ${s.note?`<div class="note-card rv">${s.note}</div>`:''}`,
+  init:sec=>{
+    const open=b=>{ if(b.classList.contains('open')) return; b.classList.add('open'); sound.pop(); if($$('.blank:not(.open)',sec).length===0) celebrate($('.def-card',sec)); };
+    $$('.blank',sec).forEach(b=>b.onclick=()=>open(b));
+    $('.bl-all',sec).onclick=()=>$$('.blank',sec).forEach((b,i)=>setTimeout(()=>open(b),i*180));
+  }
+};
+
+/* بطاقات مقلوبة (تُستخدم أيضًا للمجموعات) */
+function flipInit(sec){ $$('.fc',sec).forEach(c=>c.onclick=()=>{ c.classList.toggle('flipped'); sound.flip(); }); }
+R.cards = {
+  html:s=>`${s.subtitle?`<p class="lead rv">${s.subtitle}</p>`:''}
+    <div class="cards" style="--n:${s.cards.length}">${s.cards.map(c=>`<div class="fc-wrap rv"><button class="fc" style="--c:${c.color||'#7C3AED'}">
+      <div class="fc-face fc-front"><div class="fc-ic">${c.icon}</div><div class="fc-title">${c.title}</div><div class="fc-hint">اضغطي للقلب ↻</div></div>
+      <div class="fc-face fc-back"><div class="fc-title sm">${c.icon} ${c.title}</div><p>${c.text}</p></div></button></div>`).join('')}</div>`,
+  init:flipInit
+};
+
+/* مراجعة الدرس السابق: بطاقات أسئلة مع كشف الإجابة ونقطة للمجموعة */
+R.recap = {
+  html:s=>`<div class="recap">${s.questions.map((it,k)=>`<div class="rc rv" style="--c:${PALETTE[k%PALETTE.length]}">
+      <div class="rc-head"><span class="rc-n">${k+1}</span><span class="rc-kind">${it.kind||'سؤال'}</span></div>
+      <p class="rc-q">${it.q}</p><div class="rc-a">💡 ${it.a}</div>
+      <div class="rc-btns"><button class="btn ghost rc-show">👀 الإجابة</button><button class="btn ok rc-plus">✓ +1</button></div></div>`).join('')}</div>`,
+  init:sec=>$$('.rc',sec).forEach(c=>{
+    $('.rc-show',c).onclick=()=>{ c.classList.add('open'); sound.pop(); };
+    $('.rc-plus',c).onclick=e=>{ c.classList.add('open'); e.currentTarget.disabled=true; sound.ding(); showAward(1); };
+  })
+};
+
+/* لعبة الترتيب */
+R.order = {
+  html:s=>`<p class="lead rv">${s.prompt}</p>
+    <div class="slots rv">${s.items.map((_,k)=>`<div class="slot" data-k="${k}"><span class="slot-n">${k+1}</span></div>`).join('<span class="slot-arrow">←</span>')}</div>
+    <div class="pool rv"></div>
+    <div class="order-info rv"><span class="oi-ic">🛡️</span><p>كل مرحلة تضعينها في مكانها الصحيح ستكشف دور الأمن السيبراني فيها.</p></div>`,
+  init:(sec,s)=>{
+    const pool=$('.pool',sec), info=$('.order-info p',sec), slots=$$('.slot',sec); let idx=0;
+    let order=s.items.map((_,k)=>k); do{ shuffle(order); }while(order.every((v,i)=>v===i));
+    order.forEach(k=>{
+      const it=s.items[k], b=document.createElement('button'); b.className='chip-stage'; b.innerHTML=`${it.icon} ${it.t}`;
+      b.onclick=()=>{
+        if(k===idx){
+          const sl=slots[k]; sl.classList.add('filled'); sl.innerHTML=`<div class="placed"><span class="pi">${it.icon}</span><b>${it.t}</b><small>${it.en||''}</small></div>`;
+          sl.onclick=()=>{ slots.forEach(x=>x.classList.remove('sel')); sl.classList.add('sel'); info.innerHTML=it.info; };
+          b.classList.add('gone'); info.innerHTML=it.info; idx++;
+          if(idx===s.items.length){ info.innerHTML='🎉 <b>'+MSG.allDone+'</b> — اضغطي على أي مرحلة لمراجعة دور الأمن فيها.'; celebrate($('.slots',sec)); }
+          else sound.ding();
+        } else { shake(b); sound.wrong(); info.innerHTML='🤔 ليست هذه المرحلة التالية… فكّري: ماذا نفعل قبل ذلك؟ '+MSG.wrong; }
+      };
+      pool.appendChild(b);
+    });
+  }
+};
+
+/* البصمة الرقمية */
+R.footprints = {
+  html:s=>`<div class="fp-wrap">
+    <div class="fp-side"><p class="lead rv" style="font-size:30px">${s.prompt}</p>
+      <div class="fp-actions rv">${s.actions.map((a,k)=>`<button class="fp-act" data-k="${k}"><span>${a.icon}</span>${a.t}</button>`).join('')}</div></div>
+    <div class="fp-board rv"><div class="fp-counter">👣 الآثار: <b>0</b></div>
+      <button class="btn primary fp-reveal">🔍 ماذا نسمّي هذه الآثار؟</button>
+      <div class="fp-def">${s.reveal}</div></div></div>`,
+  init:sec=>{
+    const board=$('.fp-board',sec), cnt=$('.fp-counter b',sec);
+    const pos=[[86,82],[72,66],[60,82],[48,64],[38,44],[26,60],[16,40],[30,24]]; let n=0;
+    $$('.fp-act',sec).forEach(a=>a.onclick=()=>{
+      const p=pos[n%pos.length], f=document.createElement('div'); f.className='foot';
+      f.style.left=p[0]+'%'; f.style.top=p[1]+'%';
+      f.innerHTML=`<span class="fi" style="transform:rotate(${-30+n*8}deg)">👣</span><span class="fl">${a.querySelector('span').textContent} ${a.textContent.replace(a.querySelector('span').textContent,'')}</span>`;
+      board.appendChild(f); a.classList.add('used'); n++; cnt.textContent=n; retrigger(cnt.parentElement,'shake'); sound.pop();
+    });
+    $('.fp-reveal',sec).onclick=()=>{ const d=$('.fp-def',sec); d.classList.toggle('show'); if(d.classList.contains('show')) sound.ding(); };
+  }
+};
+
+/* التصنيف إلى عمودين */
+R.sort = {
+  html:s=>{
+    const bk=b=>`<button class="bucket" data-b="${b.key}" style="--c:${b.color}"><div class="bk-head"><span class="bk-ic">${b.icon}</span><span>${b.label}</span><span class="bk-count">0</span></div><div class="bk-list"><div class="bk-empty">اضغطي هنا</div></div></button>`;
+    return `<p class="lead rv">${s.prompt}</p>
+      <div class="sort-wrap rv">${bk(s.buckets[0])}
+        <div class="sort-center"><div class="sort-prog"></div><div class="sort-card"></div><div class="sort-hint">👉 اختاري العمود المناسب 👈</div><div class="feedback"></div></div>
+        ${bk(s.buckets[1])}</div>`;
+  },
+  init:(sec,s)=>{
+    const card=$('.sort-card',sec), prog=$('.sort-prog',sec), fb=$('.feedback',sec);
+    const items=shuffle(s.items.slice()); let i=0;
+    const show=()=>{ const it=items[i]; card.innerHTML=`<div class="sc-ic">${it.icon||'❔'}</div><div>${it.t}</div>`; retrigger(card,'enter'); prog.textContent=`${i+1} / ${items.length}`; };
+    show();
+    $$('.bucket',sec).forEach(b=>b.onclick=()=>{
+      if(i>=items.length) return;
+      const it=items[i];
+      if(it.b===b.dataset.b){
+        const list=$('.bk-list',b), e=$('.bk-empty',list); e&&e.remove();
+        const chip=document.createElement('div'); chip.className='bk-chip'; chip.textContent=`${it.icon||''} ${it.t}`; list.appendChild(chip);
+        const c=$('.bk-count',b); c.textContent=+c.textContent+1;
+        i++; setFb(fb,true,MSG.short);
+        if(i===items.length){ card.innerHTML=`<div class="sc-ic">🎉</div><div>${MSG.allDone}</div>`; retrigger(card,'enter'); prog.textContent='✓'; $('.sort-hint',sec).style.visibility='hidden'; celebrate(card); }
+        else { sound.ding(); show(); }
+      } else { shake(card); sound.wrong(); setFb(fb,false); }
+    });
+  }
+};
+
+/* الكشف التدريجي */
+R.reveal = {
+  html:s=>`<div class="q-card big rv"><span class="q-ic">${s.qIcon||'🤔'}</span><p>${s.question}</p></div>
+    <div class="reveal-grid rv" style="--n:${s.items.length};--h:${s.h||300}px">${s.items.map((it,k)=>`<button class="rev"><div class="rev-cover">${k+1}<small>اضغطي للكشف</small></div>
+      <div class="rev-content"><div class="rev-ic">${it.icon}</div><div class="rev-t">${it.t}</div>${it.d?`<p>${it.d}</p>`:''}</div></button>`).join('')}</div>
+    <div class="center-row rv"><button class="btn ghost rev-all">👀 إظهار الكل</button></div>`,
+  init:sec=>{
+    const open=r=>{ if(r.classList.contains('open')) return; r.classList.add('open'); sound.pop(); if(!$$('.rev:not(.open)',sec).length) sound.ding(); };
+    $$('.rev',sec).forEach(r=>r.onclick=()=>open(r));
+    $('.rev-all',sec).onclick=()=>$$('.rev',sec).forEach((r,i)=>setTimeout(()=>open(r),i*250));
+  }
+};
+
+/* سجل الخادم */
+R.terminal = {
+  html:s=>`<div class="term-wrap">
+    <div class="browser rv"><div class="br-bar"><span class="dots"><i></i><i></i><i></i></span><div class="br-url">🔒 ${s.url}</div></div>
+      <div class="br-body"><div class="br-ic">🌐</div><p>${s.pageText}</p><button class="btn primary term-go">▶ زيارة الموقع</button></div></div>
+    <div class="terminal rv"><div class="term-head"><span>🖥️ خادم الموقع — Server Log</span><span class="rec">● REC</span></div>
+      <div class="term-lines"><div class="term-empty">… في انتظار زائر جديد</div></div></div></div>
+    <div class="term-q rv"><div class="row"><p>❓ ${s.question}</p><button class="btn ghost term-ans">💡 الإجابة</button></div><div class="term-a">${s.answer}</div></div>`,
+  init:(sec,s)=>{
+    const lines=$('.term-lines',sec), go=$('.term-go',sec);
+    go.onclick=()=>{
+      go.disabled=true; lines.innerHTML=''; $('.rec',sec).classList.add('on'); $('.br-ic',sec).textContent='⏳';
+      s.lines.forEach((l,i)=>setTimeout(()=>{
+        const d=document.createElement('div'); d.className='tl'; d.innerHTML=`<span class="k">${l.k}</span><span class="v">${l.v}</span>`; lines.appendChild(d); sound.tick();
+        if(i===s.lines.length-1){ $('.br-ic',sec).textContent='✅'; go.textContent='✓ تم تسجيل زيارتكِ!'; $('.rec',sec).classList.remove('on'); sound.ding(); }
+      },500+i*550));
+    };
+    $('.term-ans',sec).onclick=()=>{ $('.term-a',sec).classList.add('show'); sound.ding(); };
+  }
+};
+
+/* فكّري – زاوجي – شاركي */
+R.tps = {
+  html:s=>`<div class="q-card big rv"><span class="q-ic">💭</span><p style="font-size:36px">${s.question}</p></div>
+    <div class="phases rv">${s.phases.map((p,k)=>`<button class="phase" data-k="${k}" style="--c:${p.color}"><div class="ph-ic">${p.icon}</div><div class="ph-name">${p.name}</div><div class="ph-desc">${p.desc}</div><div class="ph-time">${fmt(p.sec)}</div></button>`).join('<span class="ph-arrow">←</span>')}</div>
+    <div class="center-row rv"><button class="btn ghost tps-ans">💡 أفكار مقترحة</button></div>
+    <div class="chips tps-chips">${s.answers.map(a=>`<span class="chip">${a}</span>`).join('')}</div>`,
+  init:(sec,s)=>{
+    const ph=$$('.phase',sec); const cds=s.phases.map((p,k)=>new Countdown(p.sec,l=>{ $('.ph-time',ph[k]).textContent=fmt(l); if(l<=5&&l>0) sound.tick(); },()=>{ ph[k].classList.add('done'); sound.bell(); }));
+    ph.forEach((b,k)=>b.onclick=()=>{
+      sound.ac();
+      if(b.classList.contains('active')){ cds[k].running?cds[k].stop():cds[k].start(); return; }
+      cds.forEach((c,j)=>{ if(j!==k) c.stop(); }); ph.forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); if(cds[k].left<=0){ cds[k].reset(); b.classList.remove('done'); } cds[k].start(); sound.pop();
+    });
+    $('.tps-ans',sec).onclick=()=>{ $('.tps-chips',sec).classList.add('show'); sound.ding(); };
+  }
+};
+
+/* المقارنة */
+R.compare = {
+  html:s=>`<div class="cmp rv">
+      <div class="cmp-head"><div></div>${s.cols.map(c=>`<div class="cmp-col" style="--c:${c.color}"><div class="cmp-ic">${c.icon}</div><div class="cmp-name">${c.name}</div><div class="cmp-an">${c.analogy}</div></div>`).join('')}</div>
+      ${s.rows.map(r=>`<div class="cmp-row"><div class="cmp-k">${r.k}</div><div class="cmp-v">${r.a}</div><div class="cmp-v">${r.b}</div></div>`).join('')}
+    </div>
+    <div class="center-row rv"><button class="btn primary cmp-next">▶ اعرضي وجه المقارنة التالي</button><button class="btn ghost cmp-all">👀 الكل</button></div>`,
+  init:sec=>{
+    const rows=$$('.cmp-row',sec), btn=$('.cmp-next',sec); let i=0;
+    const step=()=>{ if(i<rows.length){ rows[i++].classList.add('show'); sound.pop(); } if(i>=rows.length){ btn.disabled=true; btn.textContent='✓ اكتملت المقارنة'; } };
+    btn.onclick=step; $('.cmp-all',sec).onclick=()=>{ while(i<rows.length) step(); };
+  }
+};
+
+/* المطابقة */
+R.match = {
+  html:s=>{ const order=shuffle(s.pairs.map((_,k)=>k));
+    return `<p class="lead rv">${s.prompt}</p>
+    <div class="match rv"><div class="m-col">${s.pairs.map((p,k)=>`<button class="m-item term" data-k="${k}">${p.a}</button>`).join('')}</div>
+      <div class="m-col">${order.map(k=>`<button class="m-item def" data-k="${k}">${s.pairs[k].b}</button>`).join('')}</div></div>`; },
+  init:(sec,s)=>{
+    let selT=null, selD=null, done=0; const lead=$('.lead',sec);
+    const tryPair=()=>{
+      if(!selT||!selD) return;
+      const a=selT, b=selD; selT=selD=null; a.classList.remove('sel'); b.classList.remove('sel');
+      if(a.dataset.k===b.dataset.k){
+        done++; const c=PALETTE[(done-1)%PALETTE.length];
+        [a,b].forEach(x=>{ x.classList.add('matched'); x.style.setProperty('--mc',c); x.dataset.badge=done; });
+        if(done===s.pairs.length){ lead.innerHTML='🎉 '+MSG.allDone; lead.classList.add('ok-text'); celebrate($('.match',sec)); } else sound.ding();
+      } else { shake(a); shake(b); sound.wrong(); }
+    };
+    const pick=(el,isTerm)=>{
+      if(isTerm){ if(selT) selT.classList.remove('sel'); selT = selT===el?null:el; selT&&selT.classList.add('sel'); }
+      else      { if(selD) selD.classList.remove('sel'); selD = selD===el?null:el; selD&&selD.classList.add('sel'); }
+      tryPair();
+    };
+    $$('.term',sec).forEach(t=>t.onclick=()=>pick(t,true));
+    $$('.def',sec).forEach(d=>d.onclick=()=>pick(d,false));
+  }
+};
+
+/* صح أم خطأ */
+R.tf = {
+  html:s=>`<div class="tf-list">${s.items.map((it,k)=>`<div class="tf-row rv" data-k="${k}"><div class="tf-n">${k+1}</div>
+      <div><p class="tf-t">${it.t}</p><div class="tf-why"></div></div>
+      <div class="tf-btns"><button class="tf-b yes" data-v="1">✔ صح</button><button class="tf-b no" data-v="0">✖ خطأ</button></div></div>`).join('')}</div>`,
+  init:(sec,s)=>{
+    $$('.tf-row',sec).forEach(row=>{
+      const it=s.items[+row.dataset.k], why=$('.tf-why',row);
+      $$('.tf-b',row).forEach(b=>b.onclick=()=>{
+        if((b.dataset.v==='1')===it.a){
+          row.classList.add('solved'); b.classList.add('right'); why.className='tf-why show'; why.innerHTML='✓ '+(it.why||MSG.correct);
+          celebrate(b);
+        } else { shake(row); sound.wrong(); why.className='tf-why show bad'; why.textContent=MSG.wrong; }
+      });
+    });
+  }
+};
+
+/* مهام المجموعات (كل مجموعة بلونها) */
+R.groups = {
+  html:s=>`<div class="grp-top rv"><p class="lead">${s.prompt}</p><div class="timer-slot"></div></div>
+    <div class="cards grp8 rv" style="--n:4;--h:255px">${LESSON.teams.map((g,k)=>`<div class="fc-wrap"><button class="fc" style="--c:${g.color}">
+      <div class="fc-face fc-front"><div class="fc-ic">${g.icon}</div><div class="fc-title">${g.name}</div><div class="fc-hint">اضغطي لكشف المهمة 🎯</div></div>
+      <div class="fc-face fc-back"><p>${(s.tasks||[])[k]||'مهمة حرة تحددها المعلمة'}</p></div></button></div>`).join('')}</div>`,
+  init:(sec,s)=>{ flipInit(sec); mountTimer($('.timer-slot',sec), s.seconds||180, { onEnd:()=>showAward() }); }
+};
+
+/* لوحة الصدارة */
+R.leaderboard = {
+  html:()=>`<div class="lb rv"></div><div class="center-row rv"><button class="btn primary lg lb-go">🥁 أعلني الفائز</button></div>`,
+  draw(sec, reveal){
+    const max=Math.max(1,...scores), top=Math.max(...scores);
+    const order=LESSON.teams.map((t,k)=>k).sort((a,b)=>scores[b]-scores[a]);
+    $('.lb',sec).innerHTML=order.map((k,pos)=>{ const t=LESSON.teams[k], win=reveal&&top>0&&scores[k]===top;
+      return `<div class="lb-row ${win?'win':''}" style="--c:${t.color}"><span class="lb-pos">${win?'👑':pos+1}</span><span class="lb-name">${t.icon} ${t.name}</span>
+        <div class="lb-track"><div class="lb-bar" style="width:${reveal?Math.max(4,scores[k]/max*100):4}%"></div></div><span class="lb-pts">${reveal?scores[k]:'؟'}</span></div>`; }).join('');
+  },
+  init:sec=>{ $('.lb-go',sec).onclick=()=>{
+    R.leaderboard.draw(sec,true); sound.success(); setTimeout(()=>confetti.rain(220),300);
+    const w=$('.lb-row.win .lb-name',sec); if(w) $('.lb-go',sec).textContent='🏆 الفائز: '+[...$$('.lb-row.win .lb-name',sec)].map(x=>x.textContent).join(' و ');
+  }; },
+  enter:sec=>{ R.leaderboard.draw(sec,false); const b=$('.lb-go',sec); b.textContent='🥁 أعلني الفائز'; }
+};
+
+/* تحدي الدقيقة */
+R.challenge = {
+  html:s=>`<div class="ch-wrap">
+    <div class="ch-left rv"><div class="timer-slot"></div><div class="ch-score">✅ إجابات صحيحة: <b>0</b></div></div>
+    <div class="rv"><div class="ch-card"><div class="ch-num"></div><p class="ch-q"></p><div class="ch-a"></div></div>
+      <div class="ch-btns"><button class="btn ghost ch-show">👀 الإجابة</button><button class="btn ok ch-plus">✓ صحيحة +1</button><button class="btn primary ch-next">السؤال التالي ⬅</button></div></div></div>`,
+  init:(sec,s)=>{
+    let i=0, score=0; const q=$('.ch-q',sec), a=$('.ch-a',sec), num=$('.ch-num',sec), sc=$('.ch-score b',sec), plus=$('.ch-plus',sec);
+    const show=()=>{ num.textContent=`السؤال ${i+1} من ${s.questions.length}`; q.textContent=s.questions[i].q; a.textContent='💡 '+s.questions[i].a; a.classList.remove('show'); plus.disabled=false; retrigger(q,'enter'); };
+    show();
+    $('.ch-show',sec).onclick=()=>{ a.classList.add('show'); sound.pop(); };
+    plus.onclick=()=>{ score++; sc.textContent=score; plus.disabled=true; retrigger(sc,'shake'); sound.ding(); showAward(1); };
+    $('.ch-next',sec).onclick=()=>{ i=(i+1)%s.questions.length; show(); };
+    mountTimer($('.timer-slot',sec), s.seconds||60, { big:true,
+      onEnd:()=>{ num.textContent='⏰ انتهى الوقت!'; q.textContent=`النتيجة: ${score} إجابات صحيحة`; a.classList.remove('show'); if(score>0) confetti.burst(innerWidth/2,innerHeight/2,120); },
+      onReset:()=>{ score=0; sc.textContent=0; i=0; show(); } });
+  }
+};
+
+/* خريطة المراجعة */
+R.review = {
+  html:s=>{
+    const n=s.nodes.length, pts=s.nodes.map((_,k)=>{ const a=(k*360/n-90)*Math.PI/180; return [50+Math.cos(a)*40, 50+Math.sin(a)*40]; });
+    return `<div class="map rv">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">${pts.map(p=>`<line x1="50" y1="50" x2="${p[0]}" y2="${p[1]}"/>`).join('')}</svg>
+      ${s.nodes.map((nd,k)=>`<button class="node" data-k="${k}" style="left:${pts[k][0]}%;top:${pts[k][1]}%;--c:${nd.color}">${nd.icon} ${nd.t}</button>`).join('')}
+      <div class="map-center"><div class="mc-ic">${s.center.icon}</div><div class="mc-t">${s.center.t}</div><div class="mc-d">${s.center.d}</div></div></div>`;
+  },
+  init:(sec,s)=>{
+    const c=$('.map-center',sec);
+    $$('.node',sec).forEach(nb=>nb.onclick=()=>{
+      const nd=s.nodes[+nb.dataset.k]; nb.classList.add('seen');
+      c.style.background=`linear-gradient(145deg,${nd.color},#3B0764)`;
+      c.innerHTML=`<div class="mc-ic">${nd.icon}</div><div class="mc-t">${nd.t}</div><div class="mc-d">${nd.d}</div>`; retrigger(c,'enter'); sound.pop();
+      if(!$$('.node:not(.seen)',sec).length) setTimeout(()=>celebrate(c,true),300);
+    });
+  }
+};
+
+/* الختام */
+R.closing = {
+  html:s=>`<div class="closing"><div class="cl-shield rv">🛡️</div><h1 class="cl-title rv">${s.title}</h1><p class="cl-msg rv">${s.message}</p>
+    <div class="cl-tips rv">${s.tips.map(t=>`<span class="chip lg">${t}</span>`).join('')}</div>
+    <div class="cl-rate rv"><span>كيف تقيّمين فهمكِ للدرس؟</span>${s.rating.map((r,k)=>`<button class="rate" data-k="${k}">${r.e}</button>`).join('')}</div>
+    <div class="rate-msg"></div></div>`,
+  init:(sec,s)=>$$('.rate',sec).forEach(b=>b.onclick=()=>{
+    $$('.rate',sec).forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    const m=$('.rate-msg',sec); m.textContent=s.rating[+b.dataset.k].m; retrigger(m,'shake'); sound.ding();
+  }),
+  enter:()=>setTimeout(()=>confetti.rain(),700)
+};
+
+/* ---------------- 🧱 بناء الشرائح ---------------- */
+const stage=$('#stage'); const slides=[]; let current=0;
+const ANIMS=['slide','fade','zoom'];
+SLIDES.forEach((s,i)=>{
+  const r=R[s.type]; if(!r){ console.warn('نوع شريحة غير معروف:',s.type); return; }
+  const sec=document.createElement('section'); sec.className='slide t-'+s.type;
+  const head=(s.tag?`<div class="tag rv">${s.tag}</div>`:'')+(s.title&&!['title','closing'].includes(s.type)?`<h2 class="title rv">${s.title}</h2>`:'');
+  sec.innerHTML=`<div class="slide-inner">${head}<div class="content">${r.html(s,i)}</div></div>`;
+  stage.appendChild(sec);
+  $$('.rv',sec).forEach((el,k)=>el.style.setProperty('--i',Math.min(k,9)));
+  r.init&&r.init(sec,s,i);
+  slides.push({el:sec,cfg:s,r});
+});
+$('#brand').textContent=`${LESSON.lessonNo}: ${LESSON.title}`;
+
+/* ---------------- 🧭 التنقل ---------------- */
+function go(n){
+  if(n<0||n>=slides.length) return;
+  const dir=n>=current?1:-1, old=slides[current].el, nw=slides[n].el;
+  if(n!==current){ old.classList.remove('active'); retrigger(old,'leaving'); setTimeout(()=>old.classList.remove('leaving'),460); }
+  const anim=slides[n].cfg.anim||ANIMS[n%ANIMS.length];
+  nw.classList.remove('in-fade','in-zoom','in-slide-next','in-slide-prev','active'); void nw.offsetWidth;
+  nw.classList.add('active','in-'+(anim==='slide'?(dir>0?'slide-next':'slide-prev'):anim));
+  current=n; updateUI();
+  slides[n].r.enter&&slides[n].r.enter(nw,slides[n].cfg);
+}
+const next=()=>go(current+1), prev=()=>go(current-1);
+function updateUI(){
+  $('#counter').innerHTML=`<b>${current+1}</b> / ${slides.length}`;
+  $('#pgnum').textContent=`${current+1} / ${slides.length}`;
+  $('#progress i').style.width=((current+1)/slides.length*100)+'%';
+  $('#prev').disabled=current===0; $('#next').disabled=current===slides.length-1;
+}
+
+/* ---------------- 📐 ملاءمة الشاشة 16:9 ---------------- */
+function fit(){ const s=Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform=`translate(-50%,-50%) scale(${s})`; }
+addEventListener('resize',fit); fit();
+
+/* ---------------- ⌨️ لوحة المفاتيح ---------------- */
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')){ if(e.key==='Escape') e.target.blur(); return; }
+  const k=e.key;
+  if(k==='ArrowRight'||k===' '||e.code==='Space'||k==='PageDown'){ e.preventDefault(); next(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prev(); }
+  else if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); }
+  else if(k==='ت'||e.code==='KeyF'){ e.preventDefault(); clap(); }
+  else if(k==='Home'){ e.preventDefault(); go(0); }
+  else if(k==='End'){ e.preventDefault(); go(slides.length-1); }
+});
+document.addEventListener('keyup',e=>{ if((e.key===' '||e.code==='Space')&&!e.target.matches('input,textarea')) e.preventDefault(); });
+// إزالة التركيز عن الأزرار بعد الضغط حتى لا يضغطها زر Space مرة أخرى
+document.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setTimeout(()=>b.blur(),0); });
+addEventListener('wheel',e=>e.preventDefault(),{passive:false});
+
+/* سحب باللمس (للسبورة الذكية) */
+let tx=null, ty=null;
+stage.addEventListener('touchstart',e=>{ if(e.target.closest('input')) return; tx=e.touches[0].clientX; ty=e.touches[0].clientY; },{passive:true});
+stage.addEventListener('touchend',e=>{ if(tx===null) return; const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty; tx=null;
+  if(Math.abs(dx)>140&&Math.abs(dy)<80){ dx<0?next():prev(); } });
+
+/* ---------------- 🎛️ أزرار الشريط ---------------- */
+$('#next').onclick=next; $('#prev').onclick=prev; $('#clapBtn').onclick=clap;
+$('#fsBtn').onclick=()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+
+/* إخفاء الشريط تلقائيًا عند عدم تحريك الماوس */
+let idleT;
+function wake(){ document.body.classList.remove('idle'); clearTimeout(idleT);
+  idleT=setTimeout(()=>{ if(!$('#bar').matches(':hover')&&!$('#score').classList.contains('open')) document.body.classList.add('idle'); },2800); }
+['mousemove','mousedown','touchstart'].forEach(ev=>addEventListener(ev,wake,{passive:true})); wake();
+
+/* ---------------- 🏆 تنافس المجموعات ---------------- */
+const scores=LESSON.teams.map(()=>0);
+function addPoints(k,d){
+  scores[k]=Math.max(0,scores[k]+d); drawScores(k);
+  const chip=$(`#teams .tm[data-k="${k}"]`); chip&&retrigger(chip,'bump');
+}
+function drawScores(bumpIdx){
+  const max=Math.max(...scores);
+  // اللوحة الجانبية الكاملة
+  $('#scList').innerHTML=LESSON.teams.map((t,k)=>`<div class="sc-row" style="--c:${t.color}"><span class="crown">${max>0&&scores[k]===max?'👑':''}</span>
+    <span class="sc-name">${t.icon} ${t.name}</span><button data-k="${k}" data-d="-1">−</button><span class="sc-pts ${k===bumpIdx?'bump':''}">${scores[k]}</span><button data-k="${k}" data-d="1">＋</button></div>`).join('');
+  // الشريط العلوي الدائم
+  $('#teams').innerHTML=LESSON.teams.map((t,k)=>`<button class="tm ${max>0&&scores[k]===max?'lead':''}" data-k="${k}" style="--c:${t.color}" title="${t.name}">
+    <span class="tm-ic">${max>0&&scores[k]===max?'👑':t.icon}</span><b>${scores[k]}</b></button>`).join('');
+}
+$('#scList').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const d=+b.dataset.d; addPoints(+b.dataset.k,d); d>0?sound.ding():sound.pop(); });
+$('#teams').addEventListener('click',()=>$('#score').classList.add('open'));
+$('#scoreBtn').onclick=()=>$('#score').classList.toggle('open');
+$('#scClose').onclick=()=>$('#score').classList.remove('open');
+$('#scReset').onclick=()=>{ if(confirm('تصفير نقاط جميع المجموعات؟')){ scores.fill(0); drawScores(); } };
+drawScores();
+
+/* نافذة «أي مجموعة أجابت؟» — تظهر بعد كل إجابة صحيحة */
+let awardT;
+function showAward(pts){
+  pts = pts || slides[current].cfg.points || LESSON.defaultPoints || 1;
+  const box=$('#award');
+  $('#awPts').textContent='+'+pts;
+  $('#awBtns').innerHTML=LESSON.teams.map((t,k)=>`<button data-k="${k}" style="--c:${t.color}" title="${t.name}"><span>${t.icon}</span><small>${t.name}</small></button>`).join('');
+  $$('#awBtns button').forEach(b=>b.onclick=()=>{
+    addPoints(+b.dataset.k,pts); sound.ding();
+    const r=b.getBoundingClientRect(); confetti.burst(r.left+r.width/2,r.top,30);
+    box.classList.remove('open');
+  });
+  box.classList.add('open'); clearTimeout(awardT); awardT=setTimeout(()=>box.classList.remove('open'),15000);
+}
+$('#awClose').onclick=()=>$('#award').classList.remove('open');
+
+/* ---------------- ▶️ البداية ---------------- */
+go(0);
+</script>
+</body>
+</html>
