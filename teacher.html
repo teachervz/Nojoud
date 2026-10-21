@@ -617,6 +617,24 @@ body.live-on #live{transform:none}
 #lvToast{position:absolute;left:1.8vmin;right:1.8vmin;bottom:13vmin;background:var(--pdd);color:#fff;border-radius:1.6vmin;padding:1.2vmin 1.6vmin;
   font-size:1.8vmin;font-weight:800;text-align:center;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none}
 #lvToast.show{opacity:1;transform:none}
+/* 🔐 دخول المعلمة */
+#login{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(28,16,54,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#login[hidden]{display:none}
+.lg-box{width:min(92vw,62vmin);background:#fff;border-radius:4vmin;padding:4vmin 4.5vmin 3vmin;box-shadow:var(--shadow);text-align:center;display:flex;flex-direction:column;gap:1.8vmin;animation:pop .45s}
+.lg-ic{font-size:9vmin;line-height:1}
+.lg-box h2{font-size:4.2vmin;font-weight:900;color:var(--pdd)}
+.lg-box p{font-size:2.1vmin;color:var(--muted);font-weight:700;line-height:1.6}
+.lg-box label{display:flex;flex-direction:column;gap:.6vmin;text-align:start;font-size:2.2vmin;font-weight:800;color:var(--pd)}
+.lg-box input{font-size:3.4vmin;font-weight:800;text-align:center;padding:1.2vmin;border-radius:2vmin;border:3px solid var(--line);background:var(--pss);outline:none;color:var(--ink)}
+.lg-box input:focus{border-color:var(--p2);background:#fff}
+#lgPin{letter-spacing:2.4vmin;font-size:4.4vmin}
+.lg-err{min-height:2.6vmin;font-size:2.1vmin;font-weight:800;color:var(--bad)}
+.lg-box .btn{font-size:3vmin;padding:1.4vmin}
+.lg-skip{font-size:1.9vmin;font-weight:700;color:var(--muted);text-decoration:underline}
+.join-code{display:inline-flex;align-items:center;gap:16px;background:#fff;border:3px dashed var(--p2);border-radius:999px;padding:8px 30px;font-size:30px;font-weight:800;color:var(--pd);margin-bottom:26px}
+.join-code b{direction:ltr;font-size:46px;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--pink),var(--p2));border-radius:999px;padding:0 26px;letter-spacing:4px}
+.join-code[hidden]{display:none}
+#score .sc-out{width:100%;margin-top:.8vmin;font-size:1.8vmin;font-weight:800;color:var(--muted);padding:.8vmin;border-radius:999px;background:var(--pss)}
 #score .sc-new{width:100%;margin-top:.8vmin;font-size:1.9vmin;font-weight:800;color:var(--bad);padding:1vmin;border-radius:999px;background:var(--badS)}
 </style>
 </head>
@@ -647,6 +665,7 @@ body.live-on #live{transform:none}
   <div id="scList"></div>
   <button id="scReset">↺ تصفير النقاط</button>
   <button id="scNew" class="sc-new">🆕 حصة جديدة (مسح كل إجابات الأجهزة)</button>
+  <button id="scOut" class="sc-out">🚪 تسجيل خروج المعلمة</button>
 </aside>
 
 <!-- 📡 لوحة إجابات المجموعات المباشرة -->
@@ -677,6 +696,20 @@ body.live-on #live{transform:none}
 <div id="award">
   <div class="aw-head">🏅 أي مجموعة أجابت؟ <span id="awPts">+1</span><button id="awClose" title="إغلاق">✕</button></div>
   <div id="awBtns"></div>
+</div>
+
+<!-- 🔐 دخول المعلمة: رمز المعلمة + رقم سري من 4 أرقام -->
+<div id="login" hidden>
+  <form class="lg-box" id="lgForm" autocomplete="on">
+    <div class="lg-ic">👩‍🏫</div>
+    <h2>دخول المعلمة</h2>
+    <p>ادخلي برمزكِ ورقمكِ السري لتتصل أجهزة طالباتكِ بعرضكِ</p>
+    <label>رمز المعلمة<input id="lgId" name="username" autocomplete="username" dir="ltr" autocapitalize="off" spellcheck="false" required></label>
+    <label>الرقم السري (4 أرقام)<input id="lgPin" name="password" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" dir="ltr" required></label>
+    <div class="lg-err" id="lgErr"></div>
+    <button class="btn primary" type="submit" id="lgGo">دخول 🔓</button>
+    <button class="lg-skip" type="button" id="lgSkip">عرض الدرس فقط (بدون أجهزة الطالبات)</button>
+  </form>
 </div>
 
 <canvas id="fx"></canvas>
@@ -839,6 +872,7 @@ R.title = {
       <h1 class="hero-title rv">${LESSON.title}</h1>
       <p class="hero-sub rv">${s.subtitle}</p>
       <div class="hero-teams rv"><b>⚔️ ${LESSON.teams.length} مجموعات تتنافس اليوم:</b>${LESSON.teams.map(t=>`<span style="--c:${t.color}">${t.icon} ${t.name}</span>`).join('')}</div>
+      <div class="join-code rv" id="joinCode" hidden>📱 رمز الفصل على الآيباد: <b></b></div>
       <div class="rv"><button class="btn primary lg start-btn">🚀 لنبدأ المهمة</button></div>
     </div>
     <div class="hero-art rv">
@@ -1354,14 +1388,15 @@ const Live = (() => {
   let subs=[], lastSig={}, primed=false, primeT, timer=null, timerEnded=false, allDone=false;
   const seen=new Set();
   const listen=(r,ev,fn)=>{ r.on(ev,fn); subs.push(()=>r.off(ev,fn)); };
-  const noLive=()=>alert(LIVE.why==='config'
+  let on=false; // true بعد دخول المعلمة بالرقم السري الصحيح
+  const noLive=()=>LIVE.ok ? showLogin() : alert(LIVE.why==='config'
     ? 'لم يتم ربط Firebase بعد.\nالصقي بيانات مشروعكِ في ملف firebase-config.js'
     : 'تعذّر تحميل Firebase — تأكدي من اتصال الإنترنت.');
 
   function setOpen(o){ body.classList.toggle('live-on',o); fit(); }
   function toast(m){ const t=$('#lvToast'); t.textContent=m; t.classList.add('show'); clearTimeout(toast.id); toast.id=setTimeout(()=>t.classList.remove('show'),3000); }
   function toggle(force){
-    if(!LIVE.ok) return noLive();
+    if(!on) return noLive();
     want = typeof force==='boolean' ? force : !body.classList.contains('live-on');
     save('lv-show',want?'1':'0'); setOpen(want); draw();
   }
@@ -1372,23 +1407,20 @@ const Live = (() => {
     subs.forEach(f=>f()); subs=[]; answers={}; ideas={}; revealed=false; awarded=false; lastSig={}; timer=null; allDone=false;
     primed=false; clearTimeout(primeT); primeT=setTimeout(()=>primed=true,1500);
     $('#liveBtn').classList.toggle('has',!!task);
-    setOpen(LIVE.ok && want && !!task);
+    setOpen(on && want && !!task);
     draw();
-    if(!LIVE.ok) return;
-    LIVE.ready.then(()=>{
-      if(slide!==n) return;
-      LIVE.ref('live').set({ slide:n, ts:LIVE.ts() });
-      if(!task) return;
-      listen(LIVE.ref('answers/'+n),'value',s=>{ answers=s.val()||{}; draw(); });
-      listen(LIVE.ref('reveal/'+n),'value',s=>{ revealed=!!s.val(); draw(); });
-      listen(LIVE.ref('awarded/'+n),'value',s=>{ awarded=!!s.val(); draw(); });
-      listen(LIVE.ref('timer/'+n),'value',s=>{ timer=s.val(); timerEnded=!!timer&&LIVE.now()>=timer.end; tick(); });
-      if(task.kind==='ideas') listen(LIVE.ref('ideas/'+n),'child_added',s=>{
-        const d=s.val()||{}; if(!T[d.team]||!d.text) return;
-        (ideas[d.team]=ideas[d.team]||[]).push(d.text);
-        if(!seen.has(s.key)){ seen.add(s.key); const sec=slides[n].el; sec._addIdea&&sec._addIdea(d.text,T[d.team].color); }
-        draw();
-      });
+    if(!on) return;
+    LIVE.ref('live').set({ slide:n, ts:LIVE.ts() });
+    if(!task) return;
+    listen(LIVE.ref('answers/'+n),'value',s=>{ answers=s.val()||{}; draw(); });
+    listen(LIVE.ref('reveal/'+n),'value',s=>{ revealed=!!s.val(); draw(); });
+    listen(LIVE.ref('awarded/'+n),'value',s=>{ awarded=!!s.val(); draw(); });
+    listen(LIVE.ref('timer/'+n),'value',s=>{ timer=s.val(); timerEnded=!!timer&&LIVE.now()>=timer.end; tick(); });
+    if(task.kind==='ideas') listen(LIVE.ref('ideas/'+n),'child_added',s=>{
+      const d=s.val()||{}; if(!T[d.team]||!d.text) return;
+      (ideas[d.team]=ideas[d.team]||[]).push(d.text);
+      if(!seen.has(s.key)){ seen.add(s.key); const sec=slides[n].el; sec._addIdea&&sec._addIdea(d.text,T[d.team].color); }
+      draw();
     });
   }
 
@@ -1516,23 +1548,64 @@ const Live = (() => {
     ['answers','ideas','reveal','awarded','timer'].forEach(p=>LIVE.ref(p+'/'+slide).remove()); ideas={}; draw();
   };
 
-  function saveScores(){ if(LIVE.ok) LIVE.ready.then(()=>LIVE.ref('scores').set(scores.slice())); }
+  function saveScores(){ if(on) LIVE.ref('scores').set(scores.slice()); }
   function newSession(){
-    if(!LIVE.ok) return noLive();
+    if(!on) return noLive();
     if(!confirm('بدء حصة جديدة؟\nسيتم مسح كل إجابات المجموعات من الأجهزة وتصفير النقاط.')) return;
     ['answers','ideas','reveal','awarded','timer'].forEach(p=>LIVE.ref(p).remove());
     scores.fill(0); drawScores(); saveScores(); ideas={}; answers={}; seen.clear(); draw(); toast('بدأت حصة جديدة ✓');
   }
 
-  /* الاتصال + استرجاع النقاط + الأجهزة المتصلة */
+  /* 🔐 دخول المعلمة: الرمز يُحفظ على الجهاز، والرقم السري يُطلب في كل مرة */
+  function showLogin(msg){
+    $('#login').hidden=false; $('#lgErr').textContent=msg||'';
+    $('#lgId').value=$('#lgId').value||load('lv-teacher')||'';
+    setTimeout(()=>($('#lgId').value?$('#lgPin'):$('#lgId')).focus(),50);
+  }
+  $('#lgSkip').onclick=()=>{ $('#login').hidden=true; };
+  $('#lgForm').onsubmit=async e=>{
+    e.preventDefault();
+    const id=LIVE.clean($('#lgId').value), pin=$('#lgPin').value.trim(), go=$('#lgGo');
+    if(!id) return showLogin('اكتبي رمز المعلمة');
+    if(!/^\d{4}$/.test(pin)) return showLogin('الرقم السري 4 أرقام');
+    go.disabled=true; $('#lgErr').textContent='';
+    try{
+      await LIVE.ready;
+      if(LIVE.authError) throw { code:'auth' };
+      const name=await LIVE.teacherName(id);
+      if(!name) throw { code:'noteacher' };
+      await LIVE.login(id,pin);
+      save('lv-teacher',id); $('#lgPin').value=''; $('#login').hidden=true;
+      start(id,name);
+    }catch(err){
+      showLogin(err.code==='noteacher' ? 'رمز المعلمة غير موجود' : err.code==='auth' ? '⚠️ فعّلي Anonymous في Firebase'
+        : /PERMISSION_DENIED/i.test(err.code||err.message||'') ? 'الرقم السري غير صحيح' : 'تعذّر الاتصال، حاولي مرة أخرى');
+      $('#lgPin').value=''; $('#lgPin').focus();
+    }finally{ go.disabled=false; }
+  };
+  $('#scOut').onclick=async()=>{
+    if(!on) return showLogin();
+    if(!confirm('تسجيل خروج المعلمة من هذا الجهاز؟')) return;
+    try{ await LIVE.logout(LIVE.room); }catch(e){}
+    location.reload();
+  };
+
+  /* بعد الدخول: الاتصال + استرجاع النقاط + الأجهزة المتصلة */
+  function start(id,name){
+    LIVE.setRoom(id); on=true;
+    $('#lvRoom').textContent=id;
+    const jc=$('#joinCode'); jc.hidden=false; $('b',jc).textContent=id;
+    $('#liveBtn').style.opacity=''; $('#liveBtn').title='إجابات المجموعات (ج)';
+    LIVE.onConn(c=>{ const el=$('#lvConn'); el.classList.toggle('on',c); el.textContent=c?'متصل':'غير متصل'; });
+    LIVE.ref('scores').once('value',s=>{ const v=s.val(); if(v){ T.forEach((_,k)=>scores[k]=Math.max(0,+v[k]||0)); drawScores(); } });
+    LIVE.ref('presence').on('value',s=>{ const v=s.val()||{}; presence={}; Object.keys(v).forEach(k=>presence[k]=!!v[k]); draw(); });
+    onSlide(slide);
+    toast(`أهلًا ${name} 👋 رمز الفصل: ${id}`);
+  }
+
   if(LIVE.ok){
-    $('#lvRoom').textContent=LIVE.room;
-    LIVE.ready.then(()=>{
-      if(LIVE.authError){ $('#lvConn').textContent='⚠️ فعّلي Anonymous في Firebase'; }
-      LIVE.onConn(c=>{ const el=$('#lvConn'); el.classList.toggle('on',c); el.textContent=c?'متصل':'غير متصل'; });
-      LIVE.ref('scores').once('value',s=>{ const v=s.val(); if(v){ T.forEach((_,k)=>scores[k]=Math.max(0,+v[k]||0)); drawScores(); } });
-      LIVE.ref('presence').on('value',s=>{ const v=s.val()||{}; presence={}; Object.keys(v).forEach(k=>presence[k]=!!v[k]); draw(); });
-    });
+    $('#liveBtn').style.opacity=.45; $('#liveBtn').title='سجّلي الدخول لربط أجهزة الطالبات';
+    showLogin();
   } else {
     $('#liveBtn').title = LIVE.why==='config' ? 'الربط غير مفعّل: الصقي بيانات Firebase في firebase-config.js' : 'Firebase غير متاح (لا يوجد إنترنت)';
     $('#liveBtn').style.opacity=.45;

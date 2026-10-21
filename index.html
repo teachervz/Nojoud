@@ -25,8 +25,6 @@ p{color:var(--muted);font-weight:800;font-size:19px}
 .go a small{font-size:16px;font-weight:700;opacity:.9}
 .t{background:linear-gradient(135deg,var(--p2),var(--pd))}
 .s{background:linear-gradient(135deg,#F472B6,#DB2777)}
-.room{margin-top:24px;font-size:16px}
-.room b{direction:ltr;display:inline-block;background:var(--ps);color:var(--pd);border-radius:999px;padding:0 12px}
 @media (max-width:560px){.go{grid-template-columns:1fr}}
 </style>
 </head>
@@ -39,15 +37,11 @@ p{color:var(--muted);font-weight:800;font-size:19px}
     <a class="t" id="toT" href="teacher.html"><span>👩‍🏫</span>المعلمة<small>عرض الدرس على الشاشة</small></a>
     <a class="s" id="toS" href="student.html"><span>📱</span>المجموعات<small>صفحة الآيباد</small></a>
   </div>
-  <p class="room" id="room"></p>
 </main>
-<script src="firebase-config.js"></script>
 <script>
-  // نمرّر اسم الغرفة إن وُجد في الرابط: index.html?room=3-2
-  const q = new URLSearchParams(location.search), room = q.get('room') || (window.LIVE_SETTINGS||{}).room || 'class-1';
-  if (q.get('room')) ['toT','toS'].forEach(id => document.getElementById(id).href += '?room=' + encodeURIComponent(room));
-  document.getElementById('room').innerHTML = 'الغرفة: <b></b>';
-  document.querySelector('#room b').textContent = room;
+  // رابط مختصر للطالبات: index.html?room=101 يفتح صفحة الآيباد على فصل المعلمة مباشرة
+  const room = new URLSearchParams(location.search).get('room');
+  if (room) ['toT','toS'].forEach(id => document.getElementById(id).href += '?room=' + encodeURIComponent(room));
 </script>
 </body>
 </html>

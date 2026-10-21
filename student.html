@@ -33,6 +33,7 @@ input,textarea{font-family:inherit;font-size:20px;color:var(--ink)}
 header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 18px;
   padding-top:max(12px,env(safe-area-inset-top));background:rgba(255,255,255,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border-bottom:2px solid var(--line)}
+header[hidden]{display:none}
 .h-team{display:flex;align-items:center;gap:8px;background:var(--tc);color:#fff;border-radius:999px;padding:6px 18px 6px 14px;font-weight:900;font-size:20px}
 .h-team span{font-size:24px}
 .h-pts{font-weight:900;color:var(--pd);background:var(--ps);border-radius:999px;padding:6px 14px;font-size:18px}
@@ -223,12 +224,13 @@ textarea:disabled{opacity:.8}
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const T = LESSON.teams, esc = LIVE.esc, view = $('#view');
-const KEY = 'team:' + LIVE.room;
+const KEY = () => 'team:' + LIVE.room;
+const store = { get: k => { try { return localStorage.getItem(k); } catch(e) { return null; } },
+                set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e) {} } };
 const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
 const clone = v => v==null ? v : JSON.parse(JSON.stringify(v));
 
-let team = null;
-try { const t = localStorage.getItem(KEY); if (t !== null && T[+t]) team = +t; } catch(e) {}
+let team = null, teacher = '';
 
 const st = { slide:null, task:null, sent:null, loaded:false, revealed:false, revLoaded:false, draft:null, ideas:[], mix:[], timer:null, timeUp:false };
 let subs = [], presence = {}, presRef = null, liveStarted = false;
@@ -242,14 +244,15 @@ function screen(icon, title, text, extra=''){
 function renderJoin(){
   $('#hdr').hidden = true;
   view.innerHTML = `<div class="card center enter" style="--tc:var(--p)">
-      <div class="big-ic">🛡️</div><h1>${LESSON.title}</h1><p>اختاري مجموعتكِ للبدء 👇</p>
+      <div class="big-ic">🛡️</div><h1>${LESSON.title}</h1><p>فصل ${esc(teacher)} • اختاري مجموعتكِ للبدء 👇</p>
       <div class="teams">${T.map((t,k)=>`<button class="team" data-k="${k}" style="--c:${t.color}">
         ${presence[k]?`<small>📱 ${presence[k]}</small>`:''}<span class="ic">${t.icon}</span><b>${t.name}</b></button>`).join('')}</div>
-      <p style="margin-top:22px;font-size:16px">الغرفة: <b dir="ltr">${esc(LIVE.room)}</b></p></div>`;
+      <p style="margin-top:22px;font-size:16px">رمز الفصل: <b dir="ltr">${esc(LIVE.room)}</b> • <button class="h-change" id="otherCode" style="text-decoration:underline">رمز آخر</button></p></div>`;
+  $('#otherCode').onclick = () => { store.set('room', null); stopRoom(); renderCode(); };
   $$('.team').forEach(b => b.onclick = () => {
     const k = +b.dataset.k;
     if (presence[k] && !confirm(`يوجد جهاز متصل باسم مجموعة «${T[k].name}». هل تريدين المتابعة؟`)) return;
-    team = k; try { localStorage.setItem(KEY, k); } catch(e) {}
+    team = k; store.set(KEY(), k);
     enterTeam();
   });
 }
@@ -294,7 +297,7 @@ function leaveTeam(){
   subs.forEach(f => f()); subs = [];
   if (presRef) { presRef.onDisconnect().cancel(); presRef.remove(); presRef = null; }
   team = null; st.slide = null;
-  try { localStorage.removeItem(KEY); } catch(e) {}
+  store.set(KEY(), null);
   document.documentElement.style.removeProperty('--tc');
   renderJoin();
 }
@@ -547,14 +550,44 @@ if (!LIVE.ok) {
   LIVE.ready.then(() => {
     if (LIVE.authError) { screen('⚠️', 'تعذّر الدخول', 'فعّلي خيار <b>Anonymous</b> في Firebase ← Authentication ← Sign-in method'); return; }
     LIVE.onConn(c => { const el = $('#hConn'); el.classList.toggle('on', c); el.textContent = c ? 'متصل' : 'غير متصل'; });
-    LIVE.ref('presence').on('value', s => {
-      const v = s.val() || {}; presence = {};
-      Object.keys(v).forEach(k => presence[k] = Object.keys(v[k] || {}).length);
-      if (team === null) renderJoin();
-    });
-    team === null ? renderJoin() : enterTeam();
+    const code = LIVE.room || store.get('room');
+    code ? openRoom(code) : renderCode();
   });
 }
+
+/* ---------------- رمز الفصل (= رمز المعلمة) ---------------- */
+function renderCode(msg){
+  $('#hdr').hidden = true;
+  view.innerHTML = `<div class="card center enter" style="--tc:var(--p)">
+      <div class="big-ic">🔑</div><h1>اكتبي رمز الفصل</h1><p>تجدينه على شاشة المعلمة 📺</p>
+      <form id="codeForm" style="max-width:360px;margin:22px auto 0;display:flex;flex-direction:column;gap:14px">
+        <input id="codeIn" dir="ltr" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="مثل 101"
+          style="font-size:34px;font-weight:900;text-align:center;letter-spacing:4px;padding:12px;border:3px solid var(--line);border-radius:20px;background:var(--pss);outline:none">
+        <button class="send" id="codeGo">دخول ✨</button>
+        <div class="status bad" id="codeErr">${msg || ''}</div>
+      </form></div>`;
+  const inp = $('#codeIn'); inp.focus();
+  $('#codeForm').onsubmit = e => { e.preventDefault(); const c = LIVE.clean(inp.value); if (c) openRoom(c); };
+}
+
+let roomOff = null;
+async function openRoom(code){
+  code = LIVE.clean(code);
+  screen('⏳', 'جاري الدخول…', 'لحظات من فضلكِ');
+  let name = null;
+  try { name = await LIVE.teacherName(code); } catch(e) {}
+  if (!name) { store.set('room', null); return renderCode('رمز الفصل غير صحيح، تأكدي منه'); }
+  teacher = name; LIVE.setRoom(code); store.set('room', code);
+  const t = store.get(KEY()); team = t !== null && T[+t] ? +t : null;
+  const pres = LIVE.ref('presence'), presFn = s => {
+    const v = s.val() || {}; presence = {};
+    Object.keys(v).forEach(k => presence[k] = Object.keys(v[k] || {}).length);
+    if (team === null && $('.teams')) renderJoin();
+  };
+  pres.on('value', presFn); roomOff = () => pres.off('value', presFn);
+  team === null ? renderJoin() : enterTeam();
+}
+function stopRoom(){ if (roomOff) roomOff(); roomOff = null; presence = {}; }
 </script>
 </body>
 </html>

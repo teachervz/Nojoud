@@ -1,3 +1,4 @@
 # كتاب الطالبة (حجمه كبير — لا يُرفع)
 *.pdf
 .DS_Store
+teachers.json

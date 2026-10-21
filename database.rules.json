@@ -1,9 +1,36 @@
 {
   "rules": {
+    "teachers": {
+      "$id": {
+        "name": { ".read": true }
+      }
+    },
+    "staff": {
+      "$id": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && (!newData.exists() || newData.val() + '' === root.child('teachers/' + $id + '/pin').val() + '')"
+        }
+      }
+    },
     "rooms": {
-      "$room": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+      "$id": {
+        ".read": "auth != null && root.child('teachers/' + $id).exists()",
+        ".write": "auth != null && root.child('staff/' + $id + '/' + auth.uid).exists()",
+        "answers": {
+          "$slide": {
+            "$team": { ".write": "auth != null && root.child('teachers/' + $id).exists() && $team.matches(/^[0-9]{1,2}$/)" }
+          }
+        },
+        "ideas": {
+          "$slide": {
+            "$key": { ".write": "auth != null && root.child('teachers/' + $id).exists() && !data.exists()" }
+          }
+        },
+        "presence": {
+          "$team": {
+            "$key": { ".write": "auth != null && root.child('teachers/' + $id).exists()" }
+          }
+        }
       }
     }
   }

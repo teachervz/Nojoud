@@ -2,6 +2,9 @@
    📡 الربط المباشر — مشترك بين صفحة المعلمة وصفحة الطالبات (لا تحتاجين لتعديله)
    --------------------------------------------------------------------------
    شكل البيانات في Firebase Realtime Database:
+     teachers/{رمز المعلمة}         ← { name, pin } تُضاف من Firebase Console فقط
+     staff/{رمز المعلمة}/{uid}     ← جهاز المعلمة بعد إدخال الرقم السري الصحيح
+     (الغرفة = رمز المعلمة، وهو نفسه «رمز الفصل» الذي تكتبه الطالبات)
      rooms/{الغرفة}/live                 ← رقم الشريحة الحالية عند المعلمة
      rooms/{الغرفة}/answers/{شريحة}/{مجموعة} ← إجابة كل مجموعة { v, t }
      rooms/{الغرفة}/ideas/{شريحة}/{id}       ← أفكار العصف الذهني { team, text, t }
@@ -12,7 +15,9 @@
    ========================================================================== */
 const LIVE = (() => {
   const qs = new URLSearchParams(location.search);
-  const room = String(qs.get('room') || (window.LIVE_SETTINGS||{}).room || 'class-1').trim().replace(/[.#$\[\]\/\s]+/g,'-');
+  // رمز المعلمة/الفصل: أرقام وحروف إنجليزية فقط
+  const clean = s => String(s || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  let room = clean(qs.get('room'));
   const cfg = window.FIREBASE_CONFIG || {};
   const configured = !!(cfg.apiKey && cfg.databaseURL) && !/ضعي|your-project/i.test(cfg.apiKey + cfg.databaseURL);
   const ok = configured && !!window.firebase;
@@ -74,8 +79,16 @@ const LIVE = (() => {
     return null;
   }
 
+  /* ---------- المعلمات: الاسم + الدخول بالرقم السري ---------- */
+  const teacherName = id => db.ref(`teachers/${clean(id)}/name`).once('value').then(s => s.val());
+  // قواعد Firebase تقبل هذا التسجيل فقط إذا طابق الرقم السري المحفوظ لهذه المعلمة
+  const login = (id, pin) => db.ref(`staff/${clean(id)}/${firebase.auth().currentUser.uid}`).set(String(pin).trim());
+  const logout = id => db.ref(`staff/${clean(id)}/${firebase.auth().currentUser.uid}`).remove();
+
   return {
-    ok, why, room, ready,
+    ok, why, ready, clean, teacherName, login, logout,
+    get room(){ return room; },
+    setRoom(r){ room = clean(r); },
     get authError(){ return authError; },
     ref: p => db.ref(`rooms/${room}/${p}`),
     ts: () => firebase.database.ServerValue.TIMESTAMP,
